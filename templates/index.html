@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Bus Tracker | Live Dashboard</title>
+    <title>Bus Tracker | Live Dashboard with Traffic Intelligence</title>
     <!-- Leaflet CSS + JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -20,7 +20,7 @@
             <i class="fas fa-bars"></i>
         </div>
         <div class="navbar-title">
-            <i class="fas fa-bus"></i> Bus Tracker
+            <i class="fas fa-bus"></i> Bus Tracker | Traffic Smart
         </div>
         <div class="about-btn" id="aboutBtn">
             <i class="fas fa-info-circle"></i> About
@@ -29,7 +29,7 @@
 
     <!-- MAIN DASHBOARD (Sidebar + Map) -->
     <div class="dashboard-container">
-        <!-- LEFT SIDEBAR (fixed width, dark modern) -->
+        <!-- LEFT SIDEBAR -->
         <aside class="sidebar">
             <!-- Section 1 & 2: Inputs + Search -->
             <div class="search-card">
@@ -45,23 +45,25 @@
                 <button class="search-btn-primary" id="searchRouteBtn"><i class="fas fa-search"></i> Search Route</button>
             </div>
 
-            <!-- Section 3: Route Information (OSRM) -->
+            <!-- Section 3: Route Information with Traffic Intelligence -->
             <div class="info-card route-info-card">
                 <div class="card-header">
                     <i class="fas fa-route"></i>
-                    <h3>Route Information (OSRM)</h3>
+                    <h3>Route Information <span style="font-size: 0.7rem; background: #f59e0b; padding: 2px 8px; border-radius: 20px; margin-left: 8px;">Traffic Smart</span></h3>
                 </div>
                 <div class="route-metrics">
                     <div class="metric">
-                        <span class="metric-label">Distance</span>
+                        <span class="metric-label"><i class="fas fa-road"></i> Distance</span>
                         <span class="metric-value" id="routeDistance">—</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Est. Time</span>
+                        <span class="metric-label"><i class="fas fa-clock"></i> Est. Time</span>
                         <span class="metric-value" id="routeTime">—</span>
                     </div>
                 </div>
-                <div class="osrm-badge">Based on OSRM routing data</div>
+                <div class="osrm-badge">
+                    <i class="fas fa-chart-line"></i> Real-time traffic adjusted • Based on OSRM
+                </div>
             </div>
 
             <!-- Section 4: Available Buses (scrollable) -->
@@ -85,7 +87,7 @@
             <!-- MAP OVERLAY CONTROLS (right side overlay) -->
             <div class="map-controls-overlay">
                 <button id="satelliteToggleBtn" class="ctrl-btn"><i class="fa-solid fa-satellite"></i> Satellite</button>
-                <button id="findNearestStopBtn" class="ctrl-btn"><i class="fas fa-location-arrow"></i> Find Nearest Stop</button>
+                <button id="findNearestStopBtn" class="ctrl-btn"><i class="fas fa-location-arrow"></i> Nearest Stop</button>
                 <button id="hideStopsBtn" class="ctrl-btn"><i class="fas fa-eye-slash"></i> Hide Stops</button>
             </div>
             <!-- Nearest Stop Info Card (dynamic) -->
@@ -94,20 +96,21 @@
                 <div class="stop-name" id="nearestStopName">—</div>
                 <div class="stop-stats">
                     <div><span>Distance:</span> <strong id="nearestDist">—</strong></div>
-                    <div><span>Time:</span> <strong id="nearestTime">—</strong></div>
-                    <div><span>Straight line:</span> <strong id="nearestStraight">—</strong></div>
+                    <div><span>Walking Time:</span> <strong id="nearestTime">—</strong></div>
+                    <div><span>Straight Line:</span> <strong id="nearestStraight">—</strong></div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Menu Modal (simple side panel for menu icon) -->
+    <!-- Menu Modal -->
     <div id="menuModal" class="modal-overlay hidden">
         <div class="modal-content menu-modal">
             <div class="modal-header"><i class="fas fa-bus"></i> Bus Tracker Menu</div>
             <ul class="menu-list">
                 <li><i class="fas fa-map-marked-alt"></i> Live Tracking</li>
                 <li><i class="fas fa-list-ul"></i> Show All Bus Stops</li>
+                <li><i class="fas fa-chart-line"></i> Traffic Updates</li>
                 <li><i class="fas fa-ticket-alt"></i> My Tickets</li>
                 <li><i class="fas fa-bell"></i> Notifications</li>
                 <li><i class="fas fa-cog"></i> Settings</li>
@@ -120,8 +123,20 @@
     <div id="aboutModal" class="modal-overlay hidden">
         <div class="modal-content about-modal">
             <div class="modal-header"><i class="fas fa-info-circle"></i> About Bus Tracker</div>
-            <p>Modern bus tracking dashboard with real-time OSRM routing. Plan journeys, view available buses, find nearest stops, and track routes seamlessly. Data integrated with Leaflet maps & OpenStreetMap.</p>
-            <p><strong>Version 2.0</strong> | Smart mobility solution</p>
+            <p><strong>🚌 Smart Bus Tracking System</strong> with real-time traffic intelligence.</p>
+            <p>✨ <strong>Features:</strong><br>
+            • Real-time traffic-adjusted ETA based on time of day<br>
+            • Distance-based buffer for long routes<br>
+            • Live bus tracking with OSRM routing<br>
+            • Nearest stop finder with walking time estimates<br>
+            • Satellite & street view toggle<br>
+            • 500+ bus stops across Gujarat</p>
+            <p><strong>📊 Traffic Logic:</strong><br>
+            • Peak Hours (8-10 AM, 5-7 PM): +80% time<br>
+            • Rush Hours: +50% time<br>
+            • Long routes >50km: Extra buffer added<br>
+            • City routes: 15% city traffic buffer</p>
+            <p><strong>Version 3.0</strong> | Smart Mobility Solution | Made with ❤️</p>
             <button class="close-modal" id="closeAboutModal">Got it</button>
         </div>
     </div>

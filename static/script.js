@@ -12,19 +12,97 @@ let stopsVisible = true;
 let isSatellite = false;
 let currentMarkers = [];
 
-// Load stops on map
+// ========== TRAFFIC & ETA CALCULATION FUNCTIONS ==========
+
+// Calculate ETA with traffic and distance-based logic
+function calculateRealisticETA(distance_km, base_duration_minutes) {
+    const SPEEDS = {
+        ideal: 45,
+        moderate: 35,
+        heavy: 25,
+        peak: 20
+    };
+    
+    const currentHour = new Date().getHours();
+    let trafficFactor = 1.0;
+    let trafficCondition = "Normal";
+    
+    if ((currentHour >= 8 && currentHour <= 10) || (currentHour >= 17 && currentHour <= 19)) {
+        trafficFactor = 1.8;
+        trafficCondition = "Heavy Traffic";
+    } else if ((currentHour >= 7 && currentHour < 8) || (currentHour >= 19 && currentHour < 20)) {
+        trafficFactor = 1.5;
+        trafficCondition = "Moderate Traffic";
+    } else if (currentHour >= 22 || currentHour <= 5) {
+        trafficFactor = 0.8;
+        trafficCondition = "Light Traffic";
+    } else {
+        trafficFactor = 1.2;
+        trafficCondition = "Normal Traffic";
+    }
+    
+    let distanceBuffer = 0;
+    if (distance_km > 80) {
+        distanceBuffer = Math.min(40, Math.floor(distance_km * 0.4));
+    } else if (distance_km > 50) {
+        distanceBuffer = Math.min(30, Math.floor(distance_km * 0.35));
+    } else if (distance_km > 30) {
+        distanceBuffer = Math.min(20, Math.floor(distance_km * 0.3));
+    } else if (distance_km > 15) {
+        distanceBuffer = Math.min(10, Math.floor(distance_km * 0.25));
+    } else {
+        distanceBuffer = Math.min(5, Math.floor(distance_km * 0.2));
+    }
+    
+    const baseIdealTime = (distance_km / SPEEDS.ideal) * 60;
+    let estimatedTime = baseIdealTime * trafficFactor;
+    estimatedTime += distanceBuffer;
+    
+    if (distance_km >= 10 && distance_km <= 40) {
+        estimatedTime += Math.floor(distance_km * 0.15);
+    }
+    
+    const minTime = distance_km * 2;
+    if (estimatedTime < minTime) {
+        estimatedTime = minTime;
+    }
+    
+    estimatedTime = Math.round(estimatedTime);
+    
+    let formattedTime = '';
+    if (estimatedTime >= 60) {
+        const hours = Math.floor(estimatedTime / 60);
+        const minutes = estimatedTime % 60;
+        formattedTime = minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
+    } else {
+        formattedTime = `${estimatedTime} min`;
+    }
+    
+    return {
+        minutes: estimatedTime,
+        formatted: formattedTime,
+        trafficCondition: trafficCondition,
+        distanceBuffer: distanceBuffer
+    };
+}
+
+// ========== MAP LOADING FUNCTIONS ==========
+
 async function loadStops() {
     try {
-        const response = await fetch('/stops?limit=500');
+        let response = await fetch('/stops?limit=500');
+        if (!response.ok) {
+            response = await fetch('/stops-direct');
+        }
+        
         const data = await response.json();
         const stops = data.stops || data;
         
         allStops = stops;
-        
         stopsLayer.clearLayers();
         currentMarkers = [];
         
-        console.log(`Loaded ${stops.length} bus stops`);
+        console.log(`✅ Loaded ${stops.length} bus stops`);
         
         stops.forEach(stop => {
             let lat, lng;
@@ -39,7 +117,7 @@ async function loadStops() {
                 return;
             }
             
-            if (lat && lng) {
+            if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
                 const marker = L.marker([lat, lng], {
                     icon: L.divIcon({
                         className: 'custom-marker',
@@ -49,9 +127,8 @@ async function loadStops() {
                     })
                 }).bindPopup(`
                     <div style="min-width: 150px;">
-                        <b style="color: #6366f1;">${stop.name}</b><br>
-                        ${stop.city ? `<small>📍 ${stop.city}</small><br>` : ''}
-                        <small>Stop ID: ${stop.id}</small>
+                        <b style="color: #6366f1;">${escapeHtml(stop.name)}</b><br>
+                        ${stop.city ? `<small>📍 ${escapeHtml(stop.city)}</small><br>` : ''}
                     </div>
                 `);
                 marker.addTo(stopsLayer);
@@ -66,11 +143,18 @@ async function loadStops() {
         
     } catch (error) {
         console.error('Error loading stops:', error);
-        alert('Error loading bus stops. Please check if the server is running.');
     }
 }
 
-// Use my location
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ========== LOCATION FUNCTIONS ==========
+
 function useMyLocation() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(position => {
@@ -89,8 +173,6 @@ function useMyLocation() {
                 .bindPopup('<b>Your Location</b><br>You are here!')
                 .openPopup();
             
-            map.closePopup();
-            
             setTimeout(() => {
                 getNearestStop();
             }, 1000);
@@ -104,15 +186,25 @@ function useMyLocation() {
     }
 }
 
-// Geocode location using Nominatim
 async function geocodeLocation(location) {
     if (location === 'My Location' && userLocation) {
         return userLocation;
     }
     
     try {
+        let searchQuery = location;
+        if (!location.includes('Gujarat') && !location.includes('Maharashtra') && 
+            !location.includes('India') && location !== 'My Location') {
+            searchQuery = `${location}, India`;
+        }
+        
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
+            {
+                headers: {
+                    'User-Agent': 'BusTrackerApp/1.0'
+                }
+            }
         );
         const data = await response.json();
         
@@ -122,13 +214,15 @@ async function geocodeLocation(location) {
                 lng: parseFloat(data[0].lon)
             };
         }
+        return null;
     } catch (error) {
         console.error('Geocoding error:', error);
+        return null;
     }
-    return null;
 }
 
-// Search route using OSRM
+// ========== ROUTE SEARCH ==========
+
 async function searchRoute() {
     const start = document.getElementById('startInput').value;
     const dest = document.getElementById('destInput').value;
@@ -138,33 +232,55 @@ async function searchRoute() {
         return;
     }
     
-    document.getElementById('routeDistance').textContent = 'Loading...';
-    document.getElementById('routeTime').textContent = 'Loading...';
+    const distanceElement = document.getElementById('routeDistance');
+    const timeElement = document.getElementById('routeTime');
+    
+    distanceElement.innerHTML = '<div class="spinner-small"></div> Loading...';
+    timeElement.innerHTML = '<div class="spinner-small"></div> Calculating...';
     
     try {
         const startCoords = await geocodeLocation(start);
         const destCoords = await geocodeLocation(dest);
         
-        if (startCoords && destCoords) {
+        if (!startCoords || !destCoords) {
+            alert('Could not find location coordinates. Please check the location names.');
+            distanceElement.textContent = 'Not found';
+            timeElement.textContent = 'Not found';
+            return;
+        }
+        
+        // Calculate straight line distance
+        const straightDistance = calculateDistance(
+            startCoords.lat, startCoords.lng, 
+            destCoords.lat, destCoords.lng
+        );
+        
+        let finalDistance = straightDistance;
+        let osrmDuration = (straightDistance / 45) * 60;
+        
+        // Try OSRM
+        try {
             const routeResponse = await fetch(
                 `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${destCoords.lng},${destCoords.lat}?overview=full&geometries=geojson`
             );
             const routeData = await routeResponse.json();
             
             if (routeData.routes && routeData.routes[0]) {
-                const distance = routeData.routes[0].distance / 1000;
-                const duration = routeData.routes[0].duration / 60;
+                const osrmDistance = routeData.routes[0].distance / 1000;
+                osrmDuration = routeData.routes[0].duration / 60;
                 
-                document.getElementById('routeDistance').textContent = `${distance.toFixed(1)} km`;
-                document.getElementById('routeTime').textContent = `${Math.floor(duration / 60)} hr ${Math.floor(duration % 60)} min`;
+                if (osrmDistance > 0.5 && osrmDistance <= straightDistance * 2.5) {
+                    finalDistance = osrmDistance;
+                } else {
+                    finalDistance = straightDistance * 1.3;
+                }
                 
+                // Draw route on map
                 if (routeData.routes[0].geometry) {
-                    if (window.currentRoute) {
-                        map.removeLayer(window.currentRoute);
-                    }
+                    if (window.currentRoute) map.removeLayer(window.currentRoute);
                     
                     window.currentRoute = L.geoJSON(routeData.routes[0].geometry, {
-                        style: { color: '#6366f1', weight: 5, opacity: 0.7 }
+                        style: { color: '#6366f1', weight: 5, opacity: 0.8 }
                     }).addTo(map);
                     
                     setTimeout(() => {
@@ -172,20 +288,57 @@ async function searchRoute() {
                     }, 100);
                 }
             }
-        } else {
-            alert('Could not find location coordinates');
+        } catch (osrmError) {
+            console.error('OSRM error:', osrmError);
+            finalDistance = straightDistance * 1.3;
         }
+        
+        // Calculate ETA
+        const realisticETA = calculateRealisticETA(finalDistance, osrmDuration);
+        
+        // Display distance
+        let distanceDisplay = finalDistance < 1 ? `${(finalDistance * 1000).toFixed(0)} m` : `${finalDistance.toFixed(0)} km`;
+        distanceElement.innerHTML = `<strong>${distanceDisplay}</strong>`;
+        
+        // Display time with traffic info
+        let trafficIcon = '';
+        let trafficColor = '';
+        switch (realisticETA.trafficCondition) {
+            case 'Heavy Traffic':
+                trafficIcon = '🚗🚕🚙';
+                trafficColor = '#ef4444';
+                break;
+            case 'Moderate Traffic':
+                trafficIcon = '🚗🚕';
+                trafficColor = '#f59e0b';
+                break;
+            case 'Light Traffic':
+                trafficIcon = '🚗';
+                trafficColor = '#10b981';
+                break;
+            default:
+                trafficIcon = '🚌';
+                trafficColor = '#6366f1';
+        }
+        
+        timeElement.innerHTML = `
+            <strong>${realisticETA.formatted}</strong>
+            <small style="display: block; font-size: 0.7rem; color: ${trafficColor};">
+                ${trafficIcon} ${realisticETA.trafficCondition} • +${realisticETA.distanceBuffer} min buffer
+            </small>
+        `;
         
         loadBuses();
         
     } catch (error) {
         console.error('Error searching route:', error);
-        document.getElementById('routeDistance').textContent = 'Error';
-        document.getElementById('routeTime').textContent = 'Error';
+        distanceElement.textContent = 'Error';
+        timeElement.textContent = 'Try again';
     }
 }
 
-// Load available buses
+// ========== BUS FUNCTIONS ==========
+
 async function loadBuses() {
     try {
         const response = await fetch('/api/buses');
@@ -193,8 +346,8 @@ async function loadBuses() {
         
         const busesList = document.getElementById('busesList');
         
-        if (buses.length === 0) {
-            busesList.innerHTML = '<div class="loading-spinner"><p>No buses available at the moment</p></div>';
+        if (!buses || buses.length === 0) {
+            busesList.innerHTML = '<div class="loading-spinner"><p>No buses available</p></div>';
             return;
         }
         
@@ -203,20 +356,19 @@ async function loadBuses() {
             const busCard = document.createElement('div');
             busCard.className = 'bus-card';
             busCard.innerHTML = `
-                <div class="bus-number">${bus.bus_id}</div>
+                <div class="bus-number">${escapeHtml(bus.bus_id || 'Bus')}</div>
                 <div class="bus-badge">${bus.status === 'active' ? 'Active' : 'Inactive'}</div>
                 <div class="bus-time-row">
-                    <span><i class="far fa-clock"></i> Route: ${bus.route_id || 'N/A'}</span>
+                    <span><i class="far fa-clock"></i> Route: ${escapeHtml(bus.route_id || 'N/A')}</span>
                     <span><i class="fas fa-users"></i> ${bus.current_passengers || 0}/${bus.capacity || 50}</span>
                 </div>
-                <div class="bus-fare">Track Live</div>
             `;
             busCard.onclick = () => {
                 if (bus.current_location && bus.current_location.coordinates) {
                     map.setView([bus.current_location.coordinates[1], bus.current_location.coordinates[0]], 15);
                     L.marker([bus.current_location.coordinates[1], bus.current_location.coordinates[0]])
                         .addTo(map)
-                        .bindPopup(`<b>Bus ${bus.bus_id}</b><br>Currently tracking`)
+                        .bindPopup(`<b>Bus ${escapeHtml(bus.bus_id)}</b>`)
                         .openPopup();
                 }
             };
@@ -228,7 +380,8 @@ async function loadBuses() {
     }
 }
 
-// Calculate distance between two points
+// ========== DISTANCE CALCULATION ==========
+
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -240,23 +393,20 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-// Find nearest stop
+// ========== NEAREST STOP FUNCTIONS ==========
+
 async function findNearestStop() {
     if (!userLocation) {
         useMyLocation();
         setTimeout(() => {
-            if (userLocation) {
-                getNearestStop();
-            } else {
-                alert('Please enable location or enter a starting location');
-            }
+            if (userLocation) getNearestStop();
+            else alert('Please enable location');
         }, 2000);
     } else {
         getNearestStop();
     }
 }
 
-// Close nearest stop card
 function closeNearestStopCard() {
     document.getElementById('nearestStopCard').classList.add('hidden');
 }
@@ -281,10 +431,8 @@ async function getNearestStop() {
             document.getElementById('nearestStopName').textContent = nearestStop.name;
             document.getElementById('nearestDist').textContent = `${distance.toFixed(1)} km`;
             document.getElementById('nearestTime').textContent = `${Math.floor(distance * 12)} min`;
-            document.getElementById('nearestStraight').textContent = `${distance.toFixed(1)} km`;
             document.getElementById('nearestStopCard').classList.remove('hidden');
             
-            // Highlight nearest stop on map
             L.marker([nearestStop.location.coordinates[1], nearestStop.location.coordinates[0]], {
                 icon: L.divIcon({
                     className: 'nearest-marker',
@@ -292,28 +440,19 @@ async function getNearestStop() {
                     iconSize: [28, 28]
                 })
             }).addTo(map)
-                .bindPopup(`
-                    <b>Nearest Stop: ${nearestStop.name}</b><br>
-                    Distance: ${distance.toFixed(1)} km<br>
-                    Walking time: ~${Math.floor(distance * 12)} min
-                `)
+                .bindPopup(`<b>Nearest: ${nearestStop.name}</b><br>${distance.toFixed(1)} km away`)
                 .openPopup();
                 
-            setTimeout(() => {
-                map.closePopup();
-            }, 5000);
-        } else {
-            alert('No stops found within 10km radius');
+            setTimeout(() => map.closePopup(), 5000);
         }
     } catch (error) {
         console.error('Error finding nearest stop:', error);
-        alert('Could not find nearest stop');
     }
 }
 
-// Show all bus stops in a modal with search functionality
+// ========== ALL STOPS MODAL ==========
+
 function showAllStops() {
-    // Create modal if not exists
     let allStopsModal = document.getElementById('allStopsModal');
     
     if (!allStopsModal) {
@@ -322,17 +461,12 @@ function showAllStops() {
         allStopsModal.className = 'modal-overlay hidden';
         allStopsModal.innerHTML = `
             <div class="modal-content all-stops-modal">
-                <div class="modal-header">
-                    <i class="fas fa-list-ul"></i> All Bus Stops
-                </div>
+                <div class="modal-header"><i class="fas fa-list-ul"></i> All Bus Stops</div>
                 <div class="stops-search-container">
-                    <input type="text" id="stopSearchInput" placeholder="🔍 Search bus stops by name or city...">
+                    <input type="text" id="stopSearchInput" placeholder="🔍 Search bus stops...">
                 </div>
                 <div class="stops-list-container" id="stopsListContainer">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                        <p>Loading stops...</p>
-                    </div>
+                    <div class="loading-spinner"><div class="spinner"></div><p>Loading stops...</p></div>
                 </div>
                 <button class="close-modal" id="closeAllStopsModal">Close</button>
             </div>
@@ -348,9 +482,7 @@ function showAllStops() {
         });
         
         allStopsModal.addEventListener('click', (e) => {
-            if (e.target === allStopsModal) {
-                allStopsModal.classList.add('hidden');
-            }
+            if (e.target === allStopsModal) allStopsModal.classList.add('hidden');
         });
     }
     
@@ -363,7 +495,6 @@ function renderStopsList(searchTerm = '') {
     if (!container) return;
     
     let filteredStops = allStops;
-    
     if (searchTerm) {
         const term = searchTerm.toLowerCase();
         filteredStops = allStops.filter(stop => 
@@ -381,7 +512,6 @@ function renderStopsList(searchTerm = '') {
     
     filteredStops.forEach(stop => {
         let lat, lng;
-        
         if (stop.location && stop.location.coordinates) {
             lng = stop.location.coordinates[0];
             lat = stop.location.coordinates[1];
@@ -398,12 +528,12 @@ function renderStopsList(searchTerm = '') {
         let distanceText = '';
         if (userLocation && lat && lng) {
             const distance = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
-            distanceText = `<div class="distance-badge">📍 ${distance.toFixed(1)} km from you</div>`;
+            distanceText = `<div class="distance-badge">📍 ${distance.toFixed(1)} km</div>`;
         }
         
         stopDiv.innerHTML = `
-            <strong>${stop.name}</strong>
-            <small>${stop.city ? `🏙️ ${stop.city}` : ''}</small>
+            <strong>${escapeHtml(stop.name)}</strong>
+            <small>${stop.city ? escapeHtml(stop.city) : ''}</small>
             ${distanceText}
         `;
         
@@ -417,14 +547,10 @@ function renderStopsList(searchTerm = '') {
                         iconSize: [28, 28]
                     })
                 }).addTo(map)
-                    .bindPopup(`<b>${stop.name}</b><br>${stop.city ? stop.city : ''}`)
+                    .bindPopup(`<b>${escapeHtml(stop.name)}</b>`)
                     .openPopup();
-                
                 allStopsModal.classList.add('hidden');
-                
-                setTimeout(() => {
-                    map.closePopup();
-                }, 5000);
+                setTimeout(() => map.closePopup(), 5000);
             }
         };
         
@@ -432,7 +558,8 @@ function renderStopsList(searchTerm = '') {
     });
 }
 
-// Toggle stops visibility
+// ========== MAP CONTROLS ==========
+
 function toggleStops() {
     const hideBtn = document.getElementById('hideStopsBtn');
     if (stopsVisible) {
@@ -446,7 +573,6 @@ function toggleStops() {
     }
 }
 
-// Toggle satellite view
 function toggleSatellite() {
     map.removeLayer(currentTileLayer);
     
@@ -465,7 +591,8 @@ function toggleSatellite() {
     }
 }
 
-// Modal handling
+// ========== MODAL HANDLING ==========
+
 function showMenuModal() {
     document.getElementById('menuModal').classList.remove('hidden');
 }
@@ -479,7 +606,8 @@ function closeModals() {
     document.getElementById('aboutModal').classList.add('hidden');
 }
 
-// Event Listeners
+// ========== EVENT LISTENERS ==========
+
 document.getElementById('menuIcon').addEventListener('click', showMenuModal);
 document.getElementById('aboutBtn').addEventListener('click', showAboutModal);
 document.getElementById('closeMenuModal').addEventListener('click', closeModals);
@@ -490,18 +618,16 @@ document.getElementById('findNearestStopBtn').addEventListener('click', findNear
 document.getElementById('hideStopsBtn').addEventListener('click', toggleStops);
 document.getElementById('satelliteToggleBtn').addEventListener('click', toggleSatellite);
 
-// Add close button for nearest stop card
 document.addEventListener('DOMContentLoaded', () => {
     const nearestCard = document.getElementById('nearestStopCard');
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'close-stop-card';
-    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-    closeBtn.onclick = closeNearestStopCard;
-    nearestCard.insertBefore(closeBtn, nearestCard.firstChild);
-});
-
-// Add menu item for showing all stops
-document.addEventListener('DOMContentLoaded', () => {
+    if (nearestCard) {
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'close-stop-card';
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        closeBtn.onclick = closeNearestStopCard;
+        nearestCard.insertBefore(closeBtn, nearestCard.firstChild);
+    }
+    
     const menuItems = document.querySelectorAll('.menu-list li');
     menuItems.forEach(item => {
         if (item.innerHTML.includes('Show All Bus Stops')) {
@@ -513,18 +639,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Close modals when clicking outside
 window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) {
-        closeModals();
-    }
+    if (e.target.classList.contains('modal-overlay')) closeModals();
 });
 
-// Initialize
+// ========== INITIALIZATION ==========
+
 loadStops();
 loadBuses();
 
-// Auto-find nearest stop if location is available
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(position => {
         userLocation = {
@@ -535,10 +658,8 @@ if (navigator.geolocation) {
     });
 }
 
-// Refresh buses every 30 seconds
 setInterval(loadBuses, 30000);
 
-// Load stats
 async function loadStats() {
     try {
         const response = await fetch('/api/stats');

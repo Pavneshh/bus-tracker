@@ -208,6 +208,12 @@ body {
     padding: 1.2rem;
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     border: 1px solid rgba(99, 102, 241, 0.2);
+    transition: all 0.3s ease;
+}
+
+.info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
 }
 
 .card-header {
@@ -244,6 +250,12 @@ body {
     border-radius: 12px;
     text-align: center;
     border: 1px solid #fbbf24;
+    transition: all 0.3s ease;
+}
+
+.metric:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .metric-label {
@@ -261,12 +273,77 @@ body {
     color: #f59e0b;
 }
 
+.metric-value strong {
+    font-size: 1.25rem;
+    display: block;
+}
+
+.metric-value small {
+    font-size: 0.7rem;
+    margin-top: 4px;
+    display: block;
+    color: #6b7280;
+}
+
 .osrm-badge {
     font-size: 0.75rem;
     color: #6b7280;
     text-align: center;
     padding-top: 0.5rem;
     border-top: 1px solid #e2e8f0;
+}
+
+/* Traffic Advisory */
+.traffic-advisory {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    padding: 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: #92400e;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-left: 3px solid #f59e0b;
+    animation: fadeIn 0.5s ease;
+}
+
+.traffic-advisory i {
+    color: #f59e0b;
+    font-size: 1rem;
+}
+
+/* Spinner Small */
+.spinner-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e2e8f0;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+/* Distance Marker */
+.distance-marker {
+    background: none;
+    border: none;
+}
+
+.distance-marker div {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    font-weight: bold;
+    animation: bounce 1s ease;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
 }
 
 /* Buses Section */
@@ -427,6 +504,17 @@ body {
     to {
         transform: translateY(0);
         opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
@@ -708,5 +796,13 @@ body {
     .all-stops-modal {
         max-width: 95%;
         margin: 1rem;
+    }
+    
+    .metric-value strong {
+        font-size: 1rem;
+    }
+    
+    .traffic-advisory {
+        font-size: 0.7rem;
     }
 }
