@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Tracker - Map View</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Google Maps API (requires API key in config) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+</head>
+<body>
+    <header>
+        <h1>🚌 Bus Tracker - Map View</h1>
+        <p>Real-time bus locations on map</p>
+    </header>
+
+    <div class="container">
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        
+        <h2>Active Buses</h2>
+        <div class="bus-list" id="activeBusList">
+            <!-- Bus cards will be dynamically loaded here -->
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Bus Tracker. All rights reserved.</p>
+    </footer>
+
+    <script>
+        let map;
+        const busMarkers = {};
+
+        function initMap() {
+            // Default center (replace with your city coordinates)
+            const defaultCenter = { lat: 28.7041, lng: 77.1025 }; // Delhi
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: defaultCenter,
+                mapTypeId: 'roadmap'
+            });
+            
+            // Load bus locations
+            loadBusesOnMap();
+        }
+
+        function loadBusesOnMap() {
+            fetch('/api/buses/')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Buses data:', data);
+                    // Add markers for buses
+                })
+                .catch(error => console.error('Error loading buses:', error));
+        }
+
+        // Initialize map when page loads
+        window.addEventListener('load', initMap);
+    </script>
+    
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

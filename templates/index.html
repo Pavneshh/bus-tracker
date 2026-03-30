@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bus Tracker | Live Dashboard</title>
+    <!-- Leaflet CSS + JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Styles & Scripts -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <div class="top-navbar">
+        <div class="menu-icon" id="menuIcon">
+            <i class="fas fa-bars"></i>
+        </div>
+        <div class="navbar-title">
+            <i class="fas fa-bus"></i> Bus Tracker
+        </div>
+        <div class="about-btn" id="aboutBtn">
+            <i class="fas fa-info-circle"></i> About
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD (Sidebar + Map) -->
+    <div class="dashboard-container">
+        <!-- LEFT SIDEBAR (fixed width, dark modern) -->
+        <aside class="sidebar">
+            <!-- Section 1 & 2: Inputs + Search -->
+            <div class="search-card">
+                <div class="input-field">
+                    <label><i class="fas fa-map-marker-alt"></i> Starting Location</label>
+                    <input type="text" id="startInput" placeholder="e.g., Surat, Gujarat or 'My Location'">
+                    <button class="my-loc-btn" id="myLocationBtn"><i class="fas fa-location-dot"></i> My Location</button>
+                </div>
+                <div class="input-field">
+                    <label><i class="fas fa-flag-checkered"></i> Destination</label>
+                    <input type="text" id="destInput" placeholder="e.g., Mumbai, Maharashtra">
+                </div>
+                <button class="search-btn-primary" id="searchRouteBtn"><i class="fas fa-search"></i> Search Route</button>
+            </div>
+
+            <!-- Section 3: Route Information (OSRM) -->
+            <div class="info-card route-info-card">
+                <div class="card-header">
+                    <i class="fas fa-route"></i>
+                    <h3>Route Information (OSRM)</h3>
+                </div>
+                <div class="route-metrics">
+                    <div class="metric">
+                        <span class="metric-label">Distance</span>
+                        <span class="metric-value" id="routeDistance">—</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Est. Time</span>
+                        <span class="metric-value" id="routeTime">—</span>
+                    </div>
+                </div>
+                <div class="osrm-badge">Based on OSRM routing data</div>
+            </div>
+
+            <!-- Section 4: Available Buses (scrollable) -->
+            <div class="info-card buses-section">
+                <div class="card-header">
+                    <i class="fas fa-bus-alt"></i>
+                    <h3>Available Buses</h3>
+                </div>
+                <div class="buses-scroll-list" id="busesList">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                        <p>Loading buses...</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- RIGHT PANEL: MAP AREA -->
+        <main class="map-area">
+            <div id="map"></div>
+            <!-- MAP OVERLAY CONTROLS (right side overlay) -->
+            <div class="map-controls-overlay">
+                <button id="satelliteToggleBtn" class="ctrl-btn"><i class="fa-solid fa-satellite"></i> Satellite</button>
+                <button id="findNearestStopBtn" class="ctrl-btn"><i class="fas fa-location-arrow"></i> Find Nearest Stop</button>
+                <button id="hideStopsBtn" class="ctrl-btn"><i class="fas fa-eye-slash"></i> Hide Stops</button>
+            </div>
+            <!-- Nearest Stop Info Card (dynamic) -->
+            <div id="nearestStopCard" class="nearest-stop-card hidden">
+                <div class="stop-header"><i class="fas fa-bus-stop"></i> Nearest Bus Stop</div>
+                <div class="stop-name" id="nearestStopName">—</div>
+                <div class="stop-stats">
+                    <div><span>Distance:</span> <strong id="nearestDist">—</strong></div>
+                    <div><span>Time:</span> <strong id="nearestTime">—</strong></div>
+                    <div><span>Straight line:</span> <strong id="nearestStraight">—</strong></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Menu Modal (simple side panel for menu icon) -->
+    <div id="menuModal" class="modal-overlay hidden">
+        <div class="modal-content menu-modal">
+            <div class="modal-header"><i class="fas fa-bus"></i> Bus Tracker Menu</div>
+            <ul class="menu-list">
+                <li><i class="fas fa-map-marked-alt"></i> Live Tracking</li>
+                <li><i class="fas fa-list-ul"></i> Show All Bus Stops</li>
+                <li><i class="fas fa-ticket-alt"></i> My Tickets</li>
+                <li><i class="fas fa-bell"></i> Notifications</li>
+                <li><i class="fas fa-cog"></i> Settings</li>
+            </ul>
+            <button class="close-modal" id="closeMenuModal">Close</button>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal-overlay hidden">
+        <div class="modal-content about-modal">
+            <div class="modal-header"><i class="fas fa-info-circle"></i> About Bus Tracker</div>
+            <p>Modern bus tracking dashboard with real-time OSRM routing. Plan journeys, view available buses, find nearest stops, and track routes seamlessly. Data integrated with Leaflet maps & OpenStreetMap.</p>
+            <p><strong>Version 2.0</strong> | Smart mobility solution</p>
+            <button class="close-modal" id="closeAboutModal">Got it</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
