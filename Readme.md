@@ -1,5 +1,5 @@
 #map
-![Map](screenshots/map.png)
+![Map](Screenshots/map.png)
 
 #busstops
-![Bus Stops](screenshots/busstops.png)
+![Bus Stops](Screenshots/busstops.png)
