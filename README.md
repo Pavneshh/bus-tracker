@@ -1,10 +1,6 @@
 <h4>This page shows the Bus Stops according to your Search</h4><br><br>
 
 
-
-
-
-
 ![image alt](https://github.com/Pavneshh/bus-tracker/blob/9edde787a5cb2cc45f08fa753cce99a3aa7ac395/busstops.png)
 
 <br><br>
@@ -12,3 +8,7 @@
 <br>
 
 ![image alt](https://github.com/Pavneshh/bus-tracker/blob/e930d14221eba70b0f290bca09fb7484e6416d1e/map.png)
+
+
+
+Run app.py and to insert real buses run this command  in another termainal "Invoke-RestMethod -Method POST -Uri http://127.0.0.1:5000/api/buses/insert-real-buses"

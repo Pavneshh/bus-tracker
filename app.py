@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect
 from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
@@ -32,13 +32,13 @@ try:
     connection_success = True
     print("✅ Connected to MongoDB successfully!")
     
-    # Check both collections for stops - FIXED: Don't use collections directly in if statements
+    # Check both collections for stops
     stops_count = db.stops.count_documents({})
     busstops_count = db.busstops.count_documents({})
     print(f"📊 Found {stops_count} stops in 'stops' collection")
     print(f"📊 Found {busstops_count} stops in 'busstops' collection")
     
-    # CRITICAL FIX: Use busstops collection since it has data
+    # Use busstops collection since it has data
     if busstops_count > 0:
         stops_collection = db.busstops
         print("✅ Using 'busstops' collection for stops data")
@@ -50,19 +50,15 @@ try:
         print("⚠️ WARNING: No stops data found in any collection!")
     
     # Check buses collection
-    buses_count = db.buses.count_documents({})
-    print(f"📊 Found {buses_count} buses in 'buses' collection")
-    
-    if buses_count >= 0:  # Always set buses_collection if db exists
-        buses_collection = db.buses
-        print("✅ Using 'buses' collection")
+    buses_collection = db.buses
+    print("✅ Using 'buses' collection")
     
     # Make collections available globally for routes
     app.config['STOPS_COLLECTION'] = stops_collection
     app.config['BUSES_COLLECTION'] = buses_collection
     app.config['DB'] = db
     
-    # Create geospatial index if not exists (for better performance)
+    # Create geospatial index if not exists
     if stops_collection is not None:
         try:
             stops_collection.create_index([("location", "2dsphere")])
@@ -87,7 +83,7 @@ except Exception as e:
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     """Calculate distance between two points in kilometers using Haversine formula"""
-    R = 6371  # Earth's radius in kilometers
+    R = 6371
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
     dlat = lat2 - lat1
     dlon = lon2 - lon1
@@ -133,14 +129,14 @@ def home():
         },
         'endpoints': [
             '/dashboard - Web interface',
-            '/stops - All bus stops (via blueprint)',
-            '/stops-direct - Direct stops endpoint',
+            '/buses - Bus booking page',
+            '/stops - All bus stops',
             '/nearby-stops - Find nearby stops',
-            '/stops/search - Search stops by name',
-            '/stops/<id> - Get stop by ID',
             '/api/buses - Bus information',
+            '/api/buses/search - Search buses with filters',
+            '/api/buses/clear-all-buses - Clear all fake buses',
+            '/api/buses/insert-real-buses - Insert real bus data',
             '/api/stats - Database statistics',
-            '/test-distance - Test distance calculation between cities',
             '/test-db - Test database connection'
         ]
     })
@@ -150,7 +146,29 @@ def dashboard():
     """Dashboard route - serves the HTML interface"""
     return render_template('index.html')
 
-# ========== STOPS ROUTES (Direct, not using blueprint) ==========
+@app.route("/buses")
+def buses_page():
+    """Bus booking page - similar to MakeMyTrip"""
+    return render_template('buses.html')
+
+@app.route("/seats")
+def seats_page():
+    """Seat selection page"""
+    return render_template('seats.html')
+
+# ========== OFFER REDIRECT ROUTES ==========
+
+@app.route("/offer/mmt")
+def offer_mmt():
+    """Redirect to MakeMyTrip with MMT offer"""
+    return redirect("https://www.makemytrip.com/bus/")
+
+@app.route("/offer/mydeal")
+def offer_mydeal():
+    """Redirect to MakeMyTrip with MyDeal offer"""
+    return redirect("https://www.makemytrip.com/bus/")
+
+# ========== STOPS ROUTES ==========
 
 @app.route("/stops-direct")
 def get_stops_direct():
@@ -191,15 +209,11 @@ def get_stops():
         return jsonify({"error": "Database not connected"}), 503
     
     try:
-        # Get pagination parameters
         page = int(request.args.get('page', 1))
         limit = int(request.args.get('limit', 100))
         skip = (page - 1) * limit
         
-        # Get total count
         total_stops = stops_collection.count_documents({})
-        
-        # Fetch stops
         stops = stops_collection.find().skip(skip).limit(limit)
         
         result = []
@@ -236,18 +250,14 @@ def nearby_stops():
     try:
         lat = float(request.args.get("lat"))
         lng = float(request.args.get("lng"))
-        radius = float(request.args.get("radius", 5000))  # Default 5km radius
+        radius = float(request.args.get("radius", 5000))
         
-        # Validate coordinates
         is_valid, valid_lat, valid_lng = validate_coordinates(lat, lng)
         if not is_valid:
-            return jsonify({"error": "Invalid coordinates. Please provide valid lat and lng"}), 400
-        
-        print(f"🔍 Searching stops near: lat={valid_lat}, lng={valid_lng}, radius={radius}m")
+            return jsonify({"error": "Invalid coordinates"}), 400
         
         result = []
         
-        # Try geospatial query first
         try:
             stops = stops_collection.find({
                 "location": {
@@ -265,25 +275,17 @@ def nearby_stops():
                 coordinates = stop.get("location", {}).get("coordinates", [])
                 if coordinates and len(coordinates) >= 2:
                     distance = calculate_distance(valid_lat, valid_lng, coordinates[1], coordinates[0])
-                    
                     result.append({
                         "id": str(stop["_id"]),
                         "name": stop.get("name", "Unknown"),
                         "city": stop.get("city", ""),
-                        "location": {
-                            "type": "Point",
-                            "coordinates": coordinates
-                        },
+                        "location": {"type": "Point", "coordinates": coordinates},
                         "distance_km": round(distance, 2)
                     })
             
             result.sort(key=lambda x: x["distance_km"])
-            print(f"✅ Found {len(result)} nearby stops via geospatial query")
             
         except Exception as geo_error:
-            # Fallback: manual distance calculation
-            print(f"⚠️ Geospatial query failed, using fallback: {geo_error}")
-            
             all_stops = list(stops_collection.find())
             for stop in all_stops:
                 coords = stop.get("location", {}).get("coordinates", [])
@@ -294,19 +296,10 @@ def nearby_stops():
                             "id": str(stop["_id"]),
                             "name": stop.get("name", "Unknown"),
                             "city": stop.get("city", ""),
-                            "location": {
-                                "type": "Point",
-                                "coordinates": coords
-                            },
+                            "location": {"type": "Point", "coordinates": coords},
                             "distance_km": round(distance, 2)
                         })
-            
             result.sort(key=lambda x: x["distance_km"])
-            print(f"✅ Found {len(result)} nearby stops via manual calculation")
-        
-        if result:
-            nearest = result[0]
-            print(f"📍 Nearest stop: {nearest['name']} at {nearest['distance_km']} km")
         
         return jsonify(result[:20])
         
@@ -377,7 +370,6 @@ def get_stop(stop_id):
 
 @app.route("/api/buses")
 def get_buses():
-    """Get all buses"""
     if buses_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
@@ -389,16 +381,294 @@ def get_buses():
             result.append({
                 "id": str(bus["_id"]),
                 "bus_id": bus.get("bus_id"),
-                "route_id": bus.get("route_id"),
-                "capacity": bus.get("capacity", 50),
-                "current_passengers": bus.get("current_passengers", 0),
-                "status": bus.get("status", "active"),
+                "bus_name": bus.get("bus_name"),
+                "operator_name": bus.get("operator_name"),
+                "ac_type": bus.get("ac_type"),
+                "seat_type": bus.get("seat_type"),
+                "price": bus.get("price"),
+                "departure_time": bus.get("departure_time"),
+                "arrival_time": bus.get("arrival_time"),
+                "duration": bus.get("duration"),
+                "available_seats": bus.get("available_seats", bus.get("capacity", 50)),
+                "rating": bus.get("rating"),
+                "status": bus.get("status", "inactive"),
                 "current_location": bus.get("current_location", {})
             })
         
         return jsonify(result)
     except Exception as e:
         print(f"Error in get_buses: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ========== BUS BOOKING API ENDPOINTS ==========
+
+@app.route("/api/buses/clear-all-buses", methods=["DELETE"])
+def clear_all_buses():
+    """Clear all existing buses from database"""
+    if buses_collection is None:
+        return jsonify({"error": "Database not connected"}), 503
+    
+    try:
+        result = buses_collection.delete_many({})
+        return jsonify({
+            "success": True,
+            "message": f"Deleted {result.deleted_count} buses"
+        })
+    except Exception as e:
+        print(f"Error clearing buses: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/buses/search")
+def search_buses_api():
+    """Search buses with filters and pagination"""
+    if buses_collection is None:
+        return jsonify({"error": "Database not connected"}), 503
+    
+    try:
+        from_city = request.args.get('from', '')
+        to_city = request.args.get('to', '')
+        date = request.args.get('date', '')
+        ac_type = request.args.get('ac_type', '')
+        seat_type = request.args.get('seat_type', '')
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+        sort_by = request.args.get('sort_by', 'relevance')
+        sort_order = request.args.get('sort_order', 'asc')
+        
+        skip = (page - 1) * limit
+        
+        # Build query
+        query = {}
+        
+        if from_city:
+            query['from_city'] = {'$regex': from_city, '$options': 'i'}
+        if to_city:
+            query['to_city'] = {'$regex': to_city, '$options': 'i'}
+        
+        if ac_type:
+            query['ac_type'] = ac_type
+        
+        if seat_type:
+            query['seat_type'] = seat_type
+        
+        # Build sort
+        sort_field = {
+            'price': 'price',
+            'rating': 'rating',
+            'departure': 'departure_time',
+            'arrival': 'arrival_time',
+            'relevance': 'rating'
+        }.get(sort_by, 'rating')
+        
+        sort_direction = 1 if sort_order == 'asc' else -1
+        
+        total_buses = buses_collection.count_documents(query)
+        buses = buses_collection.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit)
+        
+        result = []
+        for bus in buses:
+            result.append({
+                "id": str(bus["_id"]),
+                "bus_name": bus.get("bus_name", "Unknown"),
+                "operator_name": bus.get("operator_name", "Local Operator"),
+                "bus_type": f"{bus.get('ac_type', 'NON A/C')} {bus.get('seat_type', 'Seater')} (2+1)",
+                "price": bus.get("price", 3000),
+                "original_price": bus.get("original_price", bus.get("price", 3000)),
+                "discount": bus.get("discount", 0),
+                "departure_time": bus.get("departure_time", "16:50"),
+                "arrival_time": bus.get("arrival_time", "17:10"),
+                "duration": bus.get("duration", "00h 20m"),
+                "available_seats": bus.get("available_seats", 37),
+                "single_seats": bus.get("single_seats", 11),
+                "rating": bus.get("rating", 4.2),
+                "reviews_count": bus.get("reviews_count", 150),
+                "amenities": bus.get("amenities", ["Water", "Charging Point"]),
+                "pickup_points": bus.get("pickup_points", []),
+                "drop_points": bus.get("drop_points", []),
+                "cancellation_policy": bus.get("cancellation_policy", "Free cancellation up to 6 hours"),
+                "cancellation_policy_details": bus.get("cancellation_policy_details", {}),
+                "travel_policy": bus.get("travel_policy", {}),
+                "is_prime": bus.get("is_prime", False),
+                "status": bus.get("status", "active")
+            })
+        
+        return jsonify({
+            "buses": result,
+            "total": total_buses,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total_buses + limit - 1) // limit,
+            "has_more": skip + limit < total_buses
+        })
+        
+    except Exception as e:
+        print(f"Error in search_buses_api: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/buses/insert-real-buses", methods=["POST"])
+def insert_real_buses():
+    """Insert the real bus data from the screenshots"""
+    if buses_collection is None:
+        return jsonify({"error": "Database not connected"}), 503
+    
+    try:
+        # Real bus data from screenshots (ONLY THESE 4 BUSES)
+        real_buses = [
+            {
+                "bus_name": "VISHWAKARMA TRAVELS",
+                "operator_name": "VISHWAKARMA TRAVELS",
+                "ac_type": "NON A/C",
+                "seat_type": "Sleeper",
+                "price": 5000,
+                "original_price": 5000,
+                "discount": 0,
+                "from_city": "Bhilad",
+                "to_city": "Vapi",
+                "departure_time": "13:15",
+                "arrival_time": "13:45",
+                "duration": "00h 30m",
+                "available_seats": 37,
+                "single_seats": 11,
+                "rating": 4.2,
+                "reviews_count": 234,
+                "amenities": ["Water Bottle", "Charging Point", "Reading Light"],
+                "pickup_points": ["Bhilad (Naroli Fatak) - Giriraj Kathiyawadi Hotel", "Bhilad Hanuman Mandir", "Bhilad Railway Station Highway"],
+                "drop_points": ["Vapi (Gunjan Chokdi NH-48) - Hotel Pappilion", "Gunjan Chokdi", "Vapi Ayush Hospital"],
+                "cancellation_policy": "Partial cancellation not allowed",
+                "cancellation_policy_details": {
+                    "more_than_24hrs": {"percentage": 50, "amount": 2500},
+                    "12_to_24hrs": {"percentage": 80, "amount": 4000},
+                    "0_to_12hrs": {"percentage": 100, "amount": 5000}
+                },
+                "travel_policy": {
+                    "child_passenger": "Children above age 5 need ticket",
+                    "luggage": "2 pieces free, excess chargeable",
+                    "pets": "Not allowed",
+                    "liquor": "Prohibited",
+                    "pickup_time": "Operator not obligated to wait"
+                },
+                "is_prime": False,
+                "status": "active"
+            },
+            {
+                "bus_name": "JAY KHODIYAR BUS SERVICE",
+                "operator_name": "JAY KHODIYAR BUS SERVICE",
+                "ac_type": "NON A/C",
+                "seat_type": "Sleeper",
+                "price": 1890,
+                "original_price": 2100,
+                "discount": 210,
+                "from_city": "Bhilad",
+                "to_city": "Vapi",
+                "departure_time": "03:00",
+                "arrival_time": "03:30",
+                "duration": "00h 30m",
+                "available_seats": 32,
+                "single_seats": 10,
+                "rating": 4.5,
+                "reviews_count": 567,
+                "amenities": ["Water Bottle", "Charging Point", "Reading Light", "Blanket"],
+                "pickup_points": ["Bhilad (Naroli Fatak) - Giriraj Kathiyawadi Hotel", "Bhilad Hanuman Mandir"],
+                "drop_points": ["Vapi (Gunjan Chokdi NH-48) - Hotel Pappilion", "GUNJAN CHOKDI, HIGHWAY", "Vapi Ayush Hospital"],
+                "cancellation_policy": "Free cancellation available",
+                "cancellation_policy_details": {
+                    "more_than_24hrs": {"percentage": 15, "amount": 375},
+                    "12_to_24hrs": {"percentage": 20, "amount": 500},
+                    "4_to_12hrs": {"percentage": 50, "amount": 1250},
+                    "0_to_4hrs": {"percentage": 100, "amount": 2500}
+                },
+                "travel_policy": {
+                    "child_passenger": "Children above age 5 need ticket",
+                    "luggage": "2 pieces free, excess chargeable",
+                    "pets": "Not allowed",
+                    "liquor": "Prohibited",
+                    "pickup_time": "Operator not obligated to wait"
+                },
+                "is_prime": True,
+                "status": "active"
+            },
+            {
+                "bus_name": "Jay Travels (Ekta Travels)",
+                "operator_name": "Jay Travels (Ekta Travels)",
+                "ac_type": "NON A/C",
+                "seat_type": "Sleeper",
+                "price": 900,
+                "original_price": 900,
+                "discount": 0,
+                "from_city": "Bhilad",
+                "to_city": "Vapi",
+                "departure_time": "16:45",
+                "arrival_time": "17:00",
+                "duration": "00h 15m",
+                "available_seats": 32,
+                "single_seats": 10,
+                "rating": 4.1,
+                "reviews_count": 345,
+                "amenities": ["Charging Point", "Reading Light"],
+                "pickup_points": ["Bhilad (Naroli Fatak) - Giriraj Kathiyawadi Hotel"],
+                "drop_points": ["Vapi (Gunjan Chokdi NH-48) - Hotel Pappilion"],
+                "cancellation_policy": "Partial cancellation not allowed",
+                "cancellation_policy_details": {
+                    "more_than_48hrs": {"percentage": 10, "amount": 90},
+                    "24_to_48hrs": {"percentage": 20, "amount": 180},
+                    "12_to_24hrs": {"percentage": 40, "amount": 360},
+                    "8_to_12hrs": {"percentage": 50, "amount": 450},
+                    "0_to_8hrs": {"percentage": 100, "amount": 900}
+                },
+                "travel_policy": {
+                    "child_passenger": "Children above age 5 need ticket",
+                    "luggage": "2 pieces free, excess chargeable",
+                    "pets": "Not allowed",
+                    "liquor": "Prohibited"
+                },
+                "is_prime": True,
+                "status": "active"
+            },
+            {
+                "bus_name": "J K travels",
+                "operator_name": "J K travels",
+                "ac_type": "NON A/C",
+                "seat_type": "Sleeper",
+                "price": 1500,
+                "original_price": 1500,
+                "discount": 0,
+                "from_city": "Bhilad",
+                "to_city": "Vapi",
+                "departure_time": "18:30",
+                "arrival_time": "18:55",
+                "duration": "00h 25m",
+                "available_seats": 45,
+                "single_seats": 15,
+                "rating": 3.9,
+                "reviews_count": 189,
+                "amenities": ["Water Bottle", "Charging Point"],
+                "pickup_points": ["Bhilad Bus Stand", "Bhilad Chokdi"],
+                "drop_points": ["Vapi Bus Stand", "Vapi Railway Station"],
+                "cancellation_policy": "Free cancellation up to 6 hours",
+                "travel_policy": {
+                    "child_passenger": "Children above age 5 need ticket",
+                    "luggage": "2 pieces free",
+                    "pets": "Not allowed"
+                },
+                "is_prime": False,
+                "status": "active"
+            }
+        ]
+        
+        # Clear existing buses first
+        deleted_count = buses_collection.delete_many({}).deleted_count
+        
+        # Insert real buses
+        buses_collection.insert_many(real_buses)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Deleted {deleted_count} fake buses and inserted {len(real_buses)} real buses",
+            "total_buses": len(real_buses)
+        })
+        
+    except Exception as e:
+        print(f"Error inserting real buses: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ========== STATISTICS ROUTES ==========
@@ -475,7 +745,7 @@ def test_db():
             "has_data": sample_bus is not None,
             "sample": {
                 "id": str(sample_bus["_id"]) if sample_bus else None,
-                "bus_id": sample_bus.get("bus_id") if sample_bus else None
+                "bus_name": sample_bus.get("bus_name") if sample_bus else None
             } if sample_bus else None
         }
     else:
@@ -506,7 +776,10 @@ if __name__ == "__main__":
     else:
         print("⚠️ Running without database - some features will not work")
     
-    print("\n📱 Access the app at: http://127.0.0.1:5000/dashboard")
+    print("\n📱 Access the app at: http://127.0.0.1:5000/")
+    print("🚌 Bus Booking Page: http://127.0.0.1:5000/buses")
+    print("📍 Dashboard: http://127.0.0.1:5000/dashboard")
+    print("🎫 Seat Selection: http://127.0.0.1:5000/seats")
     print("🔧 API endpoints available at: http://127.0.0.1:5000/")
     print("🧪 Test database: http://127.0.0.1:5000/test-db")
     print("="*50 + "\n")

@@ -12,17 +12,41 @@ let stopsVisible = true;
 let isSatellite = false;
 let currentMarkers = [];
 
-// ========== TRAFFIC & ETA CALCULATION FUNCTIONS ==========
+// ========== BUS ROUTE DATA ==========
+const ROUTE_CITIES = [
+    "Mumbai", "Bhilad", "Vapi", "Pardi", "Valsad", "Navsari", "Surat", 
+    "Kamrej", "KIM", "Kosamba", "Ankleshwar", "Bharuch", "Karjan", "Por", 
+    "Vadodara", "Anand", "Nadiad", "Ahmedabad", "Gandhinagar", "Adalaj", 
+    "Kalol", "Chhatral", "Nandasan", "Mehsana", "Bhandu", "Unjha", 
+    "Sidhpur", "Chhapi", "Majadar", "Kanoor", "Palanpur", "Chadotar", 
+    "Chandisar", "Disa", "Juna Deesa", "Aseda", "Unava", "Velavapura", 
+    "Koita", "Jangral", "Vadani", "Vagdod", "Bhilvan"
+];
 
-// Calculate ETA with traffic and distance-based logic
-function calculateRealisticETA(distance_km, base_duration_minutes) {
-    const SPEEDS = {
-        ideal: 45,
-        moderate: 35,
-        heavy: 25,
-        peak: 20
-    };
+// Normalize city name
+function normalizeCityName(cityName) {
+    if (!cityName) return '';
+    return cityName.toLowerCase().trim();
+}
+
+// Check if city is on route
+function isCityOnRoute(cityName) {
+    if (!cityName) return false;
+    const normalizedInput = normalizeCityName(cityName);
     
+    for (let routeCity of ROUTE_CITIES) {
+        if (normalizeCityName(routeCity) === normalizedInput || 
+            normalizedInput.includes(normalizeCityName(routeCity))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ========== TRAFFIC & ETA CALCULATION ==========
+
+function calculateRealisticETA(distance_km, base_duration_minutes) {
+    const SPEEDS = { ideal: 45, moderate: 35, heavy: 25, peak: 20 };
     const currentHour = new Date().getHours();
     let trafficFactor = 1.0;
     let trafficCondition = "Normal";
@@ -42,30 +66,19 @@ function calculateRealisticETA(distance_km, base_duration_minutes) {
     }
     
     let distanceBuffer = 0;
-    if (distance_km > 80) {
-        distanceBuffer = Math.min(40, Math.floor(distance_km * 0.4));
-    } else if (distance_km > 50) {
-        distanceBuffer = Math.min(30, Math.floor(distance_km * 0.35));
-    } else if (distance_km > 30) {
-        distanceBuffer = Math.min(20, Math.floor(distance_km * 0.3));
-    } else if (distance_km > 15) {
-        distanceBuffer = Math.min(10, Math.floor(distance_km * 0.25));
-    } else {
-        distanceBuffer = Math.min(5, Math.floor(distance_km * 0.2));
-    }
+    if (distance_km > 80) distanceBuffer = Math.min(40, Math.floor(distance_km * 0.4));
+    else if (distance_km > 50) distanceBuffer = Math.min(30, Math.floor(distance_km * 0.35));
+    else if (distance_km > 30) distanceBuffer = Math.min(20, Math.floor(distance_km * 0.3));
+    else if (distance_km > 15) distanceBuffer = Math.min(10, Math.floor(distance_km * 0.25));
+    else distanceBuffer = Math.min(5, Math.floor(distance_km * 0.2));
     
     const baseIdealTime = (distance_km / SPEEDS.ideal) * 60;
-    let estimatedTime = baseIdealTime * trafficFactor;
-    estimatedTime += distanceBuffer;
+    let estimatedTime = baseIdealTime * trafficFactor + distanceBuffer;
     
-    if (distance_km >= 10 && distance_km <= 40) {
-        estimatedTime += Math.floor(distance_km * 0.15);
-    }
+    if (distance_km >= 10 && distance_km <= 40) estimatedTime += Math.floor(distance_km * 0.15);
     
     const minTime = distance_km * 2;
-    if (estimatedTime < minTime) {
-        estimatedTime = minTime;
-    }
+    if (estimatedTime < minTime) estimatedTime = minTime;
     
     estimatedTime = Math.round(estimatedTime);
     
@@ -91,9 +104,7 @@ function calculateRealisticETA(distance_km, base_duration_minutes) {
 async function loadStops() {
     try {
         let response = await fetch('/stops?limit=500');
-        if (!response.ok) {
-            response = await fetch('/stops-direct');
-        }
+        if (!response.ok) response = await fetch('/stops-direct');
         
         const data = await response.json();
         const stops = data.stops || data;
@@ -173,9 +184,7 @@ function useMyLocation() {
                 .bindPopup('<b>Your Location</b><br>You are here!')
                 .openPopup();
             
-            setTimeout(() => {
-                getNearestStop();
-            }, 1000);
+            setTimeout(() => getNearestStop(), 1000);
             
         }, error => {
             console.error('Geolocation error:', error);
@@ -187,9 +196,7 @@ function useMyLocation() {
 }
 
 async function geocodeLocation(location) {
-    if (location === 'My Location' && userLocation) {
-        return userLocation;
-    }
+    if (location === 'My Location' && userLocation) return userLocation;
     
     try {
         let searchQuery = location;
@@ -200,18 +207,15 @@ async function geocodeLocation(location) {
         
         const response = await fetch(
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
-            {
-                headers: {
-                    'User-Agent': 'BusTrackerApp/1.0'
-                }
-            }
+            { headers: { 'User-Agent': 'BusTrackerApp/1.0' } }
         );
         const data = await response.json();
         
         if (data && data[0]) {
             return {
                 lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lon)
+                lng: parseFloat(data[0].lon),
+                displayName: data[0].display_name
             };
         }
         return null;
@@ -219,6 +223,18 @@ async function geocodeLocation(location) {
         console.error('Geocoding error:', error);
         return null;
     }
+}
+
+function extractCityName(locationObj) {
+    if (!locationObj) return null;
+    const displayName = locationObj.displayName || '';
+    
+    for (let routeCity of ROUTE_CITIES) {
+        if (displayName.toLowerCase().includes(routeCity.toLowerCase())) {
+            return routeCity;
+        }
+    }
+    return null;
 }
 
 // ========== ROUTE SEARCH ==========
@@ -249,6 +265,12 @@ async function searchRoute() {
             return;
         }
         
+        const startCity = extractCityName(startCoords);
+        const destCity = extractCityName(destCoords);
+        
+        const isStartOnRoute = isCityOnRoute(startCity);
+        const isDestOnRoute = isCityOnRoute(destCity);
+        
         // Calculate straight line distance
         const straightDistance = calculateDistance(
             startCoords.lat, startCoords.lng, 
@@ -275,17 +297,12 @@ async function searchRoute() {
                     finalDistance = straightDistance * 1.3;
                 }
                 
-                // Draw route on map
                 if (routeData.routes[0].geometry) {
                     if (window.currentRoute) map.removeLayer(window.currentRoute);
-                    
                     window.currentRoute = L.geoJSON(routeData.routes[0].geometry, {
                         style: { color: '#6366f1', weight: 5, opacity: 0.8 }
                     }).addTo(map);
-                    
-                    setTimeout(() => {
-                        map.fitBounds(window.currentRoute.getBounds());
-                    }, 100);
+                    setTimeout(() => map.fitBounds(window.currentRoute.getBounds()), 100);
                 }
             }
         } catch (osrmError) {
@@ -300,7 +317,6 @@ async function searchRoute() {
         let distanceDisplay = finalDistance < 1 ? `${(finalDistance * 1000).toFixed(0)} m` : `${finalDistance.toFixed(0)} km`;
         distanceElement.innerHTML = `<strong>${distanceDisplay}</strong>`;
         
-        // Display time with traffic info
         let trafficIcon = '';
         let trafficColor = '';
         switch (realisticETA.trafficCondition) {
@@ -328,7 +344,9 @@ async function searchRoute() {
             </small>
         `;
         
-        loadBuses();
+        // Load buses - only if both cities are on route
+        const isRouteValid = isStartOnRoute && isDestOnRoute;
+        await loadBusesWithFilter(isRouteValid);
         
     } catch (error) {
         console.error('Error searching route:', error);
@@ -339,45 +357,110 @@ async function searchRoute() {
 
 // ========== BUS FUNCTIONS ==========
 
-async function loadBuses() {
+async function loadBusesWithFilter(isRouteValid) {
     try {
         const response = await fetch('/api/buses');
-        const buses = await response.json();
-        
+        const allBuses = await response.json();
         const busesList = document.getElementById('busesList');
         
-        if (!buses || buses.length === 0) {
+        if (!allBuses || allBuses.length === 0) {
             busesList.innerHTML = '<div class="loading-spinner"><p>No buses available</p></div>';
             return;
         }
         
-        busesList.innerHTML = '';
-        buses.forEach(bus => {
-            const busCard = document.createElement('div');
-            busCard.className = 'bus-card';
-            busCard.innerHTML = `
-                <div class="bus-number">${escapeHtml(bus.bus_id || 'Bus')}</div>
-                <div class="bus-badge">${bus.status === 'active' ? 'Active' : 'Inactive'}</div>
-                <div class="bus-time-row">
-                    <span><i class="far fa-clock"></i> Route: ${escapeHtml(bus.route_id || 'N/A')}</span>
-                    <span><i class="fas fa-users"></i> ${bus.current_passengers || 0}/${bus.capacity || 50}</span>
+        // If route is not valid, show "No buses available" message
+        if (!isRouteValid) {
+            busesList.innerHTML = `
+                <div class="no-buses-message" style="text-align: center; padding: 2rem;">
+                    <i class="fas fa-bus" style="font-size: 2rem; color: #94a3b8; margin-bottom: 0.5rem; display: block;"></i>
+                    <p style="color: #64748b;">No buses available</p>
                 </div>
             `;
+            return;
+        }
+        
+        // Only show first 3 buses
+        const displayBuses = allBuses.slice(0, 3);
+        
+        busesList.innerHTML = '';
+        displayBuses.forEach(bus => {
+            const busCard = document.createElement('div');
+            busCard.className = 'bus-card';
+            
+            const busName = bus.bus_name || bus.bus_id || 'Bus';
+            const operatorName = bus.operator_name || 'Local Operator';
+            const departureTime = bus.departure_time || '--:--';
+            const arrivalTime = bus.arrival_time || '--:--';
+            const availableSeats = bus.available_seats || bus.capacity || 0;
+            const price = bus.price || '---';
+            
+            busCard.innerHTML = `
+                <div class="bus-number">${escapeHtml(busName)}</div>
+                <div class="bus-operator-name" style="font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem;">${escapeHtml(operatorName)}</div>
+                <div class="bus-badge" style="background: ${bus.status === 'active' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6b7280, #4b5563)'}">
+                    ${bus.status === 'active' ? '● Active' : '○ Offline'}
+                </div>
+                <div class="bus-time-row" style="margin-top: 0.5rem;">
+                    <span><i class="fas fa-clock"></i> ${departureTime} → ${arrivalTime}</span>
+                    <span><i class="fas fa-chair"></i> ${availableSeats} seats</span>
+                </div>
+                <div class="bus-fare" style="margin-top: 0.5rem;">
+                    <strong style="color: #1e40af; font-size: 1.1rem;">₹${price}</strong>
+                </div>
+                <div class="bus-info">
+                    <small><i class="fas fa-building"></i> ${escapeHtml(bus.city || 'Gujarat')}</small>
+                </div>
+            `;
+            
             busCard.onclick = () => {
                 if (bus.current_location && bus.current_location.coordinates) {
                     map.setView([bus.current_location.coordinates[1], bus.current_location.coordinates[0]], 15);
                     L.marker([bus.current_location.coordinates[1], bus.current_location.coordinates[0]])
                         .addTo(map)
-                        .bindPopup(`<b>Bus ${escapeHtml(bus.bus_id)}</b>`)
+                        .bindPopup(`
+                            <b>${escapeHtml(busName)}</b><br>
+                            ${escapeHtml(operatorName)}<br>
+                            📍 ${escapeHtml(bus.city || 'Gujarat')}<br>
+                            🪑 ${availableSeats} seats available<br>
+                            💰 ₹${price}<br>
+                            ⏰ ${departureTime} → ${arrivalTime}
+                        `)
                         .openPopup();
                 }
             };
             busesList.appendChild(busCard);
         });
+        
+        // Add "View All Buses" button
+        if (allBuses.length > 3) {
+            const viewAllContainer = document.createElement('div');
+            viewAllContainer.style.marginTop = '0.75rem';
+            viewAllContainer.innerHTML = `
+                <a href="/buses" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0.75rem; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border-radius: 12px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">
+                    <i class="fas fa-bus"></i>
+                    View All ${allBuses.length} Buses
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            `;
+            busesList.appendChild(viewAllContainer);
+        }
+        
     } catch (error) {
         console.error('Error loading buses:', error);
         document.getElementById('busesList').innerHTML = '<div class="loading-spinner"><p>Error loading buses</p></div>';
     }
+}
+
+// ========== INITIAL LOAD - SHOW ENTER DESTINATION MESSAGE ==========
+async function loadBuses() {
+    const busesList = document.getElementById('busesList');
+    busesList.innerHTML = `
+        <div class="no-buses-message" style="text-align: center; padding: 2rem;">
+            <i class="fas fa-map-marked-alt" style="font-size: 2rem; color: #94a3b8; margin-bottom: 0.5rem; display: block;"></i>
+            <p style="color: #64748b;">Enter starting location and destination</p>
+            <p style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem;">Search to see available buses</p>
+        </div>
+    `;
 }
 
 // ========== DISTANCE CALCULATION ==========
@@ -646,7 +729,7 @@ window.addEventListener('click', (e) => {
 // ========== INITIALIZATION ==========
 
 loadStops();
-loadBuses();
+loadBuses(); // Shows "Enter starting location and destination"
 
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(position => {
@@ -657,8 +740,6 @@ if (navigator.geolocation) {
         map.setView([userLocation.lat, userLocation.lng], 13);
     });
 }
-
-setInterval(loadBuses, 30000);
 
 async function loadStats() {
     try {

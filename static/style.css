@@ -806,3 +806,58 @@ body {
         font-size: 0.7rem;
     }
 }
+/* View All Buses Button */
+.view-all-buses-btn {
+    margin-top: 0.5rem;
+}
+
+.view-all-buses-btn a {
+    text-decoration: none;
+    display: block;
+    text-align: center;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.view-all-buses-btn a:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+/* Bus Operator Name */
+.bus-operator-name {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+}
+
+/* Enhanced Bus Card */
+.bus-card {
+    background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%);
+    border-radius: 12px;
+    padding: 1rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid #e9d5ff;
+}
+
+.bus-card:hover {
+    transform: translateX(5px) translateY(-2px);
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    box-shadow: 0 5px 15px rgba(139, 92, 246, 0.2);
+}
+
+.bus-fare {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #10b981;
+}
+
+.bus-fare strong {
+    color: #1e40af;
+    font-size: 1.2rem;
+}
