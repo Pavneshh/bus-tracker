@@ -460,10 +460,10 @@ body {
 /* ========== NEAREST STOP CARD ========== */
 .nearest-stop-card {
     position: absolute;
-    bottom: 20px;
+    bottom: 130px;
     left: 20px;
     right: 20px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec489a 100%);
+    background: linear-gradient(135deg,#676d7a 0%,#6d7582 100%);
     border-radius: 20px;
     padding: 1.2rem;
     color: white;
@@ -860,4 +860,96 @@ body {
 .bus-fare strong {
     color: #1e40af;
     font-size: 1.2rem;
+}
+/* Live Bus Marker */
+.live-bus-marker {
+    background: none;
+    border: none;
+}
+
+.bus-marker {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    border: 2px solid white;
+}
+
+.pulse {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: rgba(245, 158, 11, 0.4);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+/* Live Bus Marker */
+.live-bus-marker {
+    background: none;
+    border: none;
+}
+
+.bus-marker {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    border: 2px solid white;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.bus-marker:hover {
+    transform: scale(1.1);
+}
+
+.pulse {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: rgba(245, 158, 11, 0.4);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+.live-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }

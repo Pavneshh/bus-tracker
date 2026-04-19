@@ -108,36 +108,306 @@
         <div class="modal-content menu-modal">
             <div class="modal-header"><i class="fas fa-bus"></i> Bus Tracker Menu</div>
             <ul class="menu-list">
-                <li><i class="fas fa-map-marked-alt"></i> Live Tracking</li>
+                <li><i class="fas fa-steering-wheel"></i> <a href="/driver" style="text-decoration: none; color: inherit;">Driver Mode</a></li>
+                <li id="liveTrackingMenu"><i class="fas fa-map-marked-alt"></i> Live Tracking</li>
                 <li><i class="fas fa-list-ul"></i> Show All Bus Stops</li>
                 <li><i class="fas fa-bus"></i> <a href="/buses" style="text-decoration: none; color: inherit;">Book a Bus</a></li>
-                <li><i class="fas fa-bell"></i> Notifications </li>
+                <li id="notificationsMenu"><i class="fas fa-bell"></i> Notifications</li>
             </ul>
             <button class="close-modal" id="closeMenuModal">Close</button>
         </div>
     </div>
 
-    <!-- About Modal -->
-    <div id="aboutModal" class="modal-overlay hidden">
-        <div class="modal-content about-modal">
-            <div class="modal-header"><i class="fas fa-info-circle"></i> About Bus Tracker</div>
-            <p><strong>🚌 Smart Bus Tracking System</strong> with real-time traffic intelligence.</p>
-            <p>✨ <strong>Features:</strong><br>
-            • Real-time traffic-adjusted ETA based on time of day<br>
-            • Distance-based buffer for long routes<br>
-            • Live bus tracking with OSRM routing<br>
-            • Nearest stop finder with walking time estimates<br>
-            • Satellite & street view toggle<br>
-            • 500+ bus stops across Gujarat</p>
-            <p><strong>📊 Traffic Logic:</strong><br>
-            • Peak Hours (8-10 AM, 5-7 PM): +80% time<br>
-            • Rush Hours: +50% time<br>
-            • Long routes >50km: Extra buffer added<br>
-            • City routes: 15% city traffic buffer</p>
-            <p><strong>Version 3.0</strong> | Smart Mobility Solution | Made with ❤️</p>
-            <button class="close-modal" id="closeAboutModal">Got it</button>
+    <!-- Live Tracking Buses Modal -->
+    <div id="liveTrackingModal" class="modal-overlay hidden">
+        <div class="modal-content live-tracking-modal">
+            <div class="modal-header"><i class="fas fa-map-marked-alt"></i> Live Tracking - Select Bus</div>
+            <div class="live-buses-list" id="liveBusesList">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Loading live buses...</p>
+                </div>
+            </div>
+            <button class="close-modal" id="closeLiveTrackingModal">Close</button>
         </div>
     </div>
+
+    <!-- Notifications Modal -->
+    <div id="notificationsModal" class="modal-overlay hidden">
+        <div class="modal-content notifications-modal">
+            <div class="modal-header"><i class="fas fa-bell"></i> Notifications</div>
+            <div class="notifications-list" id="notificationsList">
+                <div class="no-notifications">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>No notifications available yet</p>
+                    <span class="no-notif-subtitle">You'll see alerts for bus delays, cancellations, and updates here</span>
+                </div>
+            </div>
+            <button class="close-modal" id="closeNotificationsModal">Close</button>
+        </div>
+    </div>
+
+    <!-- About Modal - Clean & Professional -->
+    <div id="aboutModal" class="modal-overlay hidden">
+        <div class="modal-content about-modal">
+            <div class="modal-header">
+                <i class="fas fa-bus"></i> About Bus Tracker
+            </div>
+            
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                    <i class="fas fa-map-marked-alt" style="font-size: 2rem; color: white;"></i>
+                </div>
+                <h2 style="color: #1e293b; margin-bottom: 0.25rem;">Bus Tracker</h2>
+                <p style="color: #64748b;">Real-time Bus Tracking System | Version 2.0</p>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <p style="color: #475569; line-height: 1.6;">
+                    <strong>Bus Tracker</strong> is a real-time bus tracking system that helps you track buses live on map, 
+                    find nearby bus stops, and get accurate arrival times with traffic-adjusted ETAs.
+                </p>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="color: #1e293b; font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-star" style="color: #f59e0b;"></i> Features
+                </h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #475569;">
+                        <i class="fas fa-map-marker-alt" style="color: #6366f1; width: 20px;"></i> Live Bus Tracking
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #475569;">
+                        <i class="fas fa-chart-line" style="color: #6366f1; width: 20px;"></i> Traffic-adjusted ETA
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #475569;">
+                        <i class="fas fa-bus-stop" style="color: #6366f1; width: 20px;"></i> Nearest Stop Finder
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #475569;">
+                        <i class="fas fa-satellite" style="color: #6366f1; width: 20px;"></i> Satellite Map View
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #475569;">
+                        <i class="fas fa-route" style="color: #6366f1; width: 20px;"></i> Route Search
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #475569;">
+                        <i class="fas fa-bus" style="color: #6366f1; width: 20px;"></i> Book Buses on MakeMyTrip
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #475569;">
+                        <i class="fas fa-user-shield" style="color: #6366f1; width: 20px;"></i> Driver Approval System
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #475569;">
+                        <i class="fas fa-bell" style="color: #6366f1; width: 20px;"></i> Live Notifications
+                    </div>
+                </div>
+            </div>
+            
+        
+            <div style="text-align: center; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                <p style="color: #94a3b8; font-size: 0.7rem;">© 2026 Bus Tracker. All rights reserved.</p>
+            </div>
+            
+            <button class="close-modal" id="closeAboutModal" style="margin-top: 1rem;">Close</button>
+        </div>
+    </div>
+
+    <style>
+        /* Live Tracking Modal Styles */
+        .live-tracking-modal {
+            max-width: 450px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .live-buses-list {
+            max-height: 60vh;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+        
+        .live-bus-item {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .live-bus-item:hover {
+            background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+            transform: translateX(5px);
+            border-color: #6366f1;
+        }
+        
+        .live-bus-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+        
+        .live-bus-info {
+            flex: 1;
+        }
+        
+        .live-bus-name {
+            font-weight: 800;
+            font-size: 1rem;
+            color: #1a2c3e;
+            margin-bottom: 0.25rem;
+        }
+        
+        .live-bus-details {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+        
+        .live-bus-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            margin-right: 0.5rem;
+        }
+        
+        /* Notifications Modal Styles */
+        .notifications-modal {
+            max-width: 400px;
+            width: 90%;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .notifications-list {
+            max-height: 55vh;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+        
+        .no-notifications {
+            text-align: center;
+            padding: 3rem 1.5rem;
+        }
+        
+        .no-notifications i {
+            font-size: 3rem;
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .no-notifications p {
+            color: #64748b;
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .no-notif-subtitle {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        
+        .notification-item {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .notification-item:hover {
+            transform: translateX(3px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .notification-item.delay {
+            border-left-color: #ef4444;
+        }
+        
+        .notification-item.info {
+            border-left-color: #3b82f6;
+        }
+        
+        .notification-item.success {
+            border-left-color: #10b981;
+        }
+        
+        .notification-item.warning {
+            border-left-color: #f59e0b;
+        }
+        
+        .notification-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .notification-title i {
+            font-size: 0.85rem;
+        }
+        
+        .notification-title.delay i { color: #ef4444; }
+        .notification-title.info i { color: #3b82f6; }
+        .notification-title.success i { color: #10b981; }
+        .notification-title.warning i { color: #f59e0b; }
+        
+        .notification-message {
+            font-size: 0.75rem;
+            color: #475569;
+            margin-bottom: 0.5rem;
+        }
+        
+        .notification-time {
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+        
+        /* About Modal Styles */
+        .about-modal {
+            max-width: 550px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 28px;
+        }
+        
+        .about-modal::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .about-modal::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 3px;
+        }
+        
+        .about-modal::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 3px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>

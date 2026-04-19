@@ -6,6 +6,7 @@ let currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{
 
 let stopsLayer = L.layerGroup().addTo(map);
 let busesLayer = L.layerGroup().addTo(map);
+let liveBusesLayer = L.layerGroup().addTo(map);
 let userLocation = null;
 let allStops = [];
 let stopsVisible = true;
@@ -164,6 +165,277 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ========== LIVE BUS TRACKING ==========
+
+async function loadLiveBuses() {
+    try {
+        const response = await fetch('/api/buses/live');
+        const buses = await response.json();
+        
+        liveBusesLayer.clearLayers();
+        
+        if (!buses || buses.length === 0) {
+            console.log('No live buses active');
+            return;
+        }
+        
+        buses.forEach(bus => {
+            if (bus.lat && bus.lng) {
+                const busMarker = L.marker([bus.lat, bus.lng], {
+                    icon: L.divIcon({
+                        className: 'live-bus-marker',
+                        html: `
+                            <div class="bus-marker">
+                                <i class="fas fa-bus"></i>
+                                <div class="pulse"></div>
+                            </div>
+                        `,
+                        iconSize: [40, 40],
+                        popupAnchor: [0, -20]
+                    })
+                }).bindPopup(`
+                    <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
+                        <b style="color: #f59e0b;">🚌 ${escapeHtml(bus.bus_id)}</b><br>
+                        <small><i class="fas fa-route"></i> ${escapeHtml(bus.route_name || 'On Route')}</small><br>
+                        <small><i class="fas fa-map-marker-alt"></i> ${escapeHtml(bus.city || 'Gujarat')}</small><br>
+                        <small><i class="fas fa-clock"></i> Updated: ${new Date(bus.last_updated).toLocaleTimeString()}</small><br>
+                        <small><i class="fas fa-chair"></i> ${bus.available_seats || 'N/A'} seats available</small>
+                    </div>
+                `);
+                
+                busMarker.addTo(liveBusesLayer);
+            }
+        });
+        
+        console.log(`📍 ${buses.length} live buses on map`);
+        
+    } catch (error) {
+        console.error('Error loading live buses:', error);
+    }
+}
+
+// ========== LIVE TRACKING MODAL FUNCTIONS (FIXED) ==========
+
+async function openLiveTrackingModal() {
+    const modal = document.getElementById('liveTrackingModal');
+    const busesList = document.getElementById('liveBusesList');
+    
+    if (!modal) return;
+    
+    modal.classList.remove('hidden');
+    busesList.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading live buses...</p></div>';
+    
+    try {
+        const response = await fetch('/api/buses/live');
+        const buses = await response.json();
+        
+        if (!buses || buses.length === 0) {
+            busesList.innerHTML = `
+                <div class="no-buses-message" style="text-align: center; padding: 2rem;">
+                    <i class="fas fa-bus" style="font-size: 2rem; color: #94a3b8; margin-bottom: 0.5rem; display: block;"></i>
+                    <p style="color: #64748b;">No buses actively sharing location</p>
+                    <p style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem;">Ask drivers to start sharing location</p>
+                </div>
+            `;
+            return;
+        }
+        
+        busesList.innerHTML = '';
+        buses.forEach(bus => {
+            const busItem = document.createElement('div');
+            busItem.className = 'live-bus-item';
+            busItem.setAttribute('data-bus-id', bus.bus_id);
+            busItem.setAttribute('data-lat', bus.lat);
+            busItem.setAttribute('data-lng', bus.lng);
+            
+            // Format last updated time nicely
+            let lastUpdatedText = 'Just now';
+            if (bus.last_updated && bus.last_updated !== 'Just now') {
+                try {
+                    const updateTime = new Date(bus.last_updated);
+                    const now = new Date();
+                    const diffSeconds = Math.floor((now - updateTime) / 1000);
+                    if (diffSeconds < 60) {
+                        lastUpdatedText = `${diffSeconds} seconds ago`;
+                    } else if (diffSeconds < 3600) {
+                        lastUpdatedText = `${Math.floor(diffSeconds / 60)} minutes ago`;
+                    } else {
+                        lastUpdatedText = updateTime.toLocaleTimeString();
+                    }
+                } catch(e) {
+                    lastUpdatedText = bus.last_updated;
+                }
+            }
+            
+            busItem.innerHTML = `
+                <div class="live-bus-icon">
+                    <i class="fas fa-bus"></i>
+                </div>
+                <div class="live-bus-info">
+                    <div class="live-bus-name">🚌 ${escapeHtml(bus.bus_name || bus.bus_id)}</div>
+                    <div class="live-bus-details">
+                        <span class="live-bus-status"></span>
+                        ${escapeHtml(bus.route_name || 'On Route')}
+                    </div>
+                    <div class="live-bus-time">
+                        <i class="fas fa-clock"></i> Updated: ${lastUpdatedText}
+                    </div>
+                </div>
+                <div class="live-bus-action">
+                    <i class="fas fa-map-marker-alt" style="color: #6366f1; font-size: 1.2rem;"></i>
+                </div>
+            `;
+            
+            busItem.onclick = () => {
+                const lat = parseFloat(busItem.getAttribute('data-lat'));
+                const lng = parseFloat(busItem.getAttribute('data-lng'));
+                const busName = bus.bus_name || bus.bus_id;
+                
+                map.setView([lat, lng], 15);
+                
+                const tempMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'selected-bus-marker',
+                        html: '<div class="bus-marker"><i class="fas fa-bus"></i><div class="pulse"></div></div>',
+                        iconSize: [40, 40]
+                    })
+                }).addTo(map)
+                .bindPopup(`
+                    <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
+                        <b style="color: #f59e0b;">🚌 ${escapeHtml(busName)}</b><br>
+                        <small><i class="fas fa-route"></i> ${escapeHtml(bus.route_name || 'On Route')}</small><br>
+                        <small><i class="fas fa-clock"></i> Live location (${lastUpdatedText})</small>
+                    </div>
+                `)
+                .openPopup();
+                
+                setTimeout(() => {
+                    map.removeLayer(tempMarker);
+                }, 10000);
+                
+                document.getElementById('liveTrackingModal').classList.add('hidden');
+                showTemporaryMessage(`📍 Showing live location of ${busName}`);
+            };
+            
+            busesList.appendChild(busItem);
+        });
+        
+    } catch (error) {
+        console.error('Error loading live buses:', error);
+        busesList.innerHTML = `
+            <div class="no-buses-message" style="text-align: center; padding: 2rem;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #ef4444; margin-bottom: 0.5rem; display: block;"></i>
+                <p style="color: #64748b;">Error loading buses</p>
+                <p style="font-size: 0.7rem; color: #94a3b8;">Please try again</p>
+            </div>
+        `;
+    }
+}
+
+function closeLiveTrackingModal() {
+    const modal = document.getElementById('liveTrackingModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// ========== NOTIFICATIONS FUNCTIONS ==========
+
+function openNotificationsModal() {
+    const modal = document.getElementById('notificationsModal');
+    const notificationsList = document.getElementById('notificationsList');
+    
+    if (!modal) return;
+    
+    modal.classList.remove('hidden');
+    
+    notificationsList.innerHTML = `
+        <div class="no-notifications">
+            <i class="fas fa-bell-slash"></i>
+            <p>No notifications available yet</p>
+            <span class="no-notif-subtitle">You'll see alerts for bus delays, cancellations, and updates here</span>
+        </div>
+    `;
+}
+
+function closeNotificationsModal() {
+    const modal = document.getElementById('notificationsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function addNotification(title, message, type = 'info') {
+    const notificationsList = document.getElementById('notificationsList');
+    
+    if (notificationsList.querySelector('.no-notifications')) {
+        notificationsList.innerHTML = '';
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `notification-item ${type}`;
+    
+    let icon = '';
+    switch(type) {
+        case 'delay':
+            icon = '<i class="fas fa-clock"></i>';
+            break;
+        case 'warning':
+            icon = '<i class="fas fa-exclamation-triangle"></i>';
+            break;
+        case 'success':
+            icon = '<i class="fas fa-check-circle"></i>';
+            break;
+        default:
+            icon = '<i class="fas fa-info-circle"></i>';
+    }
+    
+    notification.innerHTML = `
+        <div class="notification-title ${type}">
+            ${icon} ${escapeHtml(title)}
+        </div>
+        <div class="notification-message">${escapeHtml(message)}</div>
+        <div class="notification-time">${new Date().toLocaleString()}</div>
+    `;
+    
+    notificationsList.insertBefore(notification, notificationsList.firstChild);
+}
+
+function showTemporaryMessage(message) {
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 40px;
+        font-size: 0.8rem;
+        z-index: 10000;
+        animation: fadeInOut 2s ease;
+    `;
+    msgDiv.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+    document.body.appendChild(msgDiv);
+    
+    setTimeout(() => {
+        msgDiv.remove();
+    }, 2000);
+}
+
+// Add CSS animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeInOut {
+        0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    }
+`;
+document.head.appendChild(style);
+
 // ========== LOCATION FUNCTIONS ==========
 
 function useMyLocation() {
@@ -271,7 +543,6 @@ async function searchRoute() {
         const isStartOnRoute = isCityOnRoute(startCity);
         const isDestOnRoute = isCityOnRoute(destCity);
         
-        // Calculate straight line distance
         const straightDistance = calculateDistance(
             startCoords.lat, startCoords.lng, 
             destCoords.lat, destCoords.lng
@@ -280,7 +551,6 @@ async function searchRoute() {
         let finalDistance = straightDistance;
         let osrmDuration = (straightDistance / 45) * 60;
         
-        // Try OSRM
         try {
             const routeResponse = await fetch(
                 `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${destCoords.lng},${destCoords.lat}?overview=full&geometries=geojson`
@@ -310,10 +580,8 @@ async function searchRoute() {
             finalDistance = straightDistance * 1.3;
         }
         
-        // Calculate ETA
         const realisticETA = calculateRealisticETA(finalDistance, osrmDuration);
         
-        // Display distance
         let distanceDisplay = finalDistance < 1 ? `${(finalDistance * 1000).toFixed(0)} m` : `${finalDistance.toFixed(0)} km`;
         distanceElement.innerHTML = `<strong>${distanceDisplay}</strong>`;
         
@@ -344,7 +612,6 @@ async function searchRoute() {
             </small>
         `;
         
-        // Load buses - only if both cities are on route
         const isRouteValid = isStartOnRoute && isDestOnRoute;
         await loadBusesWithFilter(isRouteValid);
         
@@ -368,7 +635,6 @@ async function loadBusesWithFilter(isRouteValid) {
             return;
         }
         
-        // If route is not valid, show "No buses available" message
         if (!isRouteValid) {
             busesList.innerHTML = `
                 <div class="no-buses-message" style="text-align: center; padding: 2rem;">
@@ -379,7 +645,6 @@ async function loadBusesWithFilter(isRouteValid) {
             return;
         }
         
-        // Only show first 3 buses
         const displayBuses = allBuses.slice(0, 3);
         
         busesList.innerHTML = '';
@@ -410,6 +675,9 @@ async function loadBusesWithFilter(isRouteValid) {
                 <div class="bus-info">
                     <small><i class="fas fa-building"></i> ${escapeHtml(bus.city || 'Gujarat')}</small>
                 </div>
+                <div class="live-status" style="font-size: 0.7rem; color: #10b981; margin-top: 0.5rem;">
+                    <i class="fas fa-wifi"></i> Live tracking available
+                </div>
             `;
             
             busCard.onclick = () => {
@@ -431,7 +699,6 @@ async function loadBusesWithFilter(isRouteValid) {
             busesList.appendChild(busCard);
         });
         
-        // Add "View All Buses" button
         if (allBuses.length > 3) {
             const viewAllContainer = document.createElement('div');
             viewAllContainer.style.marginTop = '0.75rem';
@@ -451,7 +718,6 @@ async function loadBusesWithFilter(isRouteValid) {
     }
 }
 
-// ========== INITIAL LOAD - SHOW ENTER DESTINATION MESSAGE ==========
 async function loadBuses() {
     const busesList = document.getElementById('busesList');
     busesList.innerHTML = `
@@ -687,6 +953,8 @@ function showAboutModal() {
 function closeModals() {
     document.getElementById('menuModal').classList.add('hidden');
     document.getElementById('aboutModal').classList.add('hidden');
+    closeLiveTrackingModal();
+    closeNotificationsModal();
 }
 
 // ========== EVENT LISTENERS ==========
@@ -700,6 +968,36 @@ document.getElementById('searchRouteBtn').addEventListener('click', searchRoute)
 document.getElementById('findNearestStopBtn').addEventListener('click', findNearestStop);
 document.getElementById('hideStopsBtn').addEventListener('click', toggleStops);
 document.getElementById('satelliteToggleBtn').addEventListener('click', toggleSatellite);
+
+// Live Tracking Menu Click
+const liveTrackingMenu = document.getElementById('liveTrackingMenu');
+if (liveTrackingMenu) {
+    liveTrackingMenu.addEventListener('click', () => {
+        closeModals();
+        openLiveTrackingModal();
+    });
+}
+
+// Notifications Menu Click
+const notificationsMenu = document.getElementById('notificationsMenu');
+if (notificationsMenu) {
+    notificationsMenu.addEventListener('click', () => {
+        closeModals();
+        openNotificationsModal();
+    });
+}
+
+// Close Live Tracking Modal
+const closeLiveTrackingModalBtn = document.getElementById('closeLiveTrackingModal');
+if (closeLiveTrackingModalBtn) {
+    closeLiveTrackingModalBtn.addEventListener('click', closeLiveTrackingModal);
+}
+
+// Close Notifications Modal
+const closeNotificationsModalBtn = document.getElementById('closeNotificationsModal');
+if (closeNotificationsModalBtn) {
+    closeNotificationsModalBtn.addEventListener('click', closeNotificationsModal);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const nearestCard = document.getElementById('nearestStopCard');
@@ -723,13 +1021,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) closeModals();
+    if (e.target.classList.contains('modal-overlay')) {
+        closeModals();
+        closeLiveTrackingModal();
+        closeNotificationsModal();
+    }
 });
 
 // ========== INITIALIZATION ==========
 
 loadStops();
-loadBuses(); // Shows "Enter starting location and destination"
+loadBuses();
+loadLiveBuses();
+setInterval(loadLiveBuses, 10000);
 
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(position => {

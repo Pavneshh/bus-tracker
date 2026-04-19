@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Driver Mode - Share Live Location</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .driver-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .header i {
+            font-size: 3rem;
+            color: #f59e0b;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            margin-top: 0.5rem;
+            color: #1e293b;
+        }
+        .bus-select {
+            margin-bottom: 1.5rem;
+        }
+        .bus-select label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #475569;
+        }
+        .bus-select select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+        }
+        .status-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .status-active {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .status-inactive {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-approved {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .status-rejected {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+            display: inline-block;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .btn {
+            width: 100%;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 40px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+        .btn-start {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        .btn-stop {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            margin-top: 0.75rem;
+        }
+        .btn-register {
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            color: white;
+            margin-top: 0.75rem;
+        }
+        .btn-start:disabled, .btn-stop:disabled, .btn-register:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .coords {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.5rem;
+            font-family: monospace;
+        }
+        .success-msg {
+            background: #dcfce7;
+            color: #15803d;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .error-msg {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .warning-msg {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .debug-info {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            margin-top: 0.5rem;
+            font-family: monospace;
+            text-align: left;
+            display: none;
+        }
+        .status-info {
+            font-size: 0.7rem;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="driver-container">
+        <div class="header">
+            <i class="fas fa-steering-wheel"></i>
+            <h1>Driver Mode</h1>
+            <p style="color: #64748b;">Share your live location</p>
+        </div>
+
+        <div class="bus-select">
+            <label><i class="fas fa-bus"></i> Select Your Bus</label>
+            <select id="busSelect">
+                <option value="">-- Select Bus --</option>
+                <option value="VISHWAKARMA TRAVELS">VISHWAKARMA TRAVELS</option>
+                <option value="JAY KHODIYAR BUS SERVICE">JAY KHODIYAR BUS SERVICE</option>
+                <option value="Jay Travels (Ekta Travels)">Jay Travels (Ekta Travels)</option>
+                <option value="J K travels">J K travels</option>
+            </select>
+        </div>
+
+        <div class="status-card">
+            <div class="status-badge status-inactive" id="statusBadge">
+                <i class="fas fa-circle"></i> Not Sharing
+            </div>
+            <div id="locationStatus">
+                <i class="fas fa-map-marker-alt"></i> Select a bus and click Start
+            </div>
+            <div class="coords" id="coordsDisplay"></div>
+            <div id="messageDisplay"></div>
+            <div id="driverStatusInfo" class="status-info"></div>
+            <div class="debug-info" id="debugInfo"></div>
+        </div>
+
+        <button class="btn btn-start" id="startBtn">
+            <i class="fas fa-play"></i> Start Sharing Location
+        </button>
+        <button class="btn btn-stop" id="stopBtn" disabled>
+            <i class="fas fa-stop"></i> Stop Sharing
+        </button>
+        <button class="btn btn-register" id="registerBtn" onclick="window.location.href='/driver-register'">
+            <i class="fas fa-id-card"></i> Register as Driver
+        </button>
+    </div>
+
+    <script>
+        let intervalId = null;
+        let isSharing = false;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const busSelect = document.getElementById('busSelect');
+        const statusBadge = document.getElementById('statusBadge');
+        const locationStatus = document.getElementById('locationStatus');
+        const coordsDisplay = document.getElementById('coordsDisplay');
+        const messageDisplay = document.getElementById('messageDisplay');
+        const debugInfo = document.getElementById('debugInfo');
+        const driverStatusInfo = document.getElementById('driverStatusInfo');
+
+        function addDebugLog(message) {
+            console.log(message);
+            debugInfo.style.display = 'block';
+            debugInfo.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            const lines = debugInfo.innerHTML.split('</div>');
+            if (lines.length > 10) {
+                debugInfo.innerHTML = lines.slice(-10).join('</div>');
+            }
+        }
+
+        function showMessage(text, type = 'success') {
+            const className = type === 'error' ? 'error-msg' : (type === 'warning' ? 'warning-msg' : 'success-msg');
+            messageDisplay.innerHTML = `<div class="${className}">${type === 'error' ? '❌ ' : type === 'warning' ? '⚠️ ' : '✅ '}${text}</div>`;
+            setTimeout(() => {
+                if (messageDisplay.innerHTML === `<div class="${className}">${type === 'error' ? '❌ ' : type === 'warning' ? '⚠️ ' : '✅ '}${text}</div>`) {
+                    messageDisplay.innerHTML = '';
+                }
+            }, 5000);
+        }
+
+        // Check driver registration and approval status
+        async function checkDriverStatus() {
+            const busId = busSelect.value;
+            if (!busId) {
+                driverStatusInfo.innerHTML = '';
+                return false;
+            }
+            
+            try {
+                addDebugLog(`Checking status for bus: ${busId}`);
+                const response = await fetch(`/api/drivers/status/${encodeURIComponent(busId)}`);
+                const data = await response.json();
+                
+                addDebugLog(`Status response: ${JSON.stringify(data)}`);
+                
+                if (!data.registered) {
+                    driverStatusInfo.innerHTML = `
+                        <div style="background: #fef3c7; padding: 0.5rem; border-radius: 8px; color: #92400e;">
+                            <i class="fas fa-exclamation-triangle"></i> Not registered. Please register first.
+                        </div>
+                    `;
+                    startBtn.disabled = true;
+                    return false;
+                }
+                
+                if (data.status === 'pending') {
+                    driverStatusInfo.innerHTML = `
+                        <div style="background: #fef3c7; padding: 0.5rem; border-radius: 8px; color: #92400e;">
+                            <i class="fas fa-clock"></i> Registration pending. Waiting for admin approval.
+                        </div>
+                    `;
+                    startBtn.disabled = true;
+                    return false;
+                }
+                
+                if (data.status === 'rejected') {
+                    driverStatusInfo.innerHTML = `
+                        <div style="background: #fee2e2; padding: 0.5rem; border-radius: 8px; color: #dc2626;">
+                            <i class="fas fa-times-circle"></i> Registration rejected. Please contact admin.
+                        </div>
+                    `;
+                    startBtn.disabled = true;
+                    return false;
+                }
+                
+                if (data.status === 'approved') {
+                    driverStatusInfo.innerHTML = `
+                        <div style="background: #dcfce7; padding: 0.5rem; border-radius: 8px; color: #15803d;">
+                            <i class="fas fa-check-circle"></i> ✅ Approved! You can share location.
+                        </div>
+                    `;
+                    startBtn.disabled = false;
+                    return true;
+                }
+                
+                return false;
+            } catch (error) {
+                addDebugLog(`Error checking status: ${error.message}`);
+                driverStatusInfo.innerHTML = `
+                    <div style="background: #fee2e2; padding: 0.5rem; border-radius: 8px; color: #dc2626;">
+                        <i class="fas fa-exclamation-triangle"></i> Error checking status. Please try again.
+                    </div>
+                `;
+                return false;
+            }
+        }
+
+        // FIXED: Send location using URL encoded format (most reliable)
+        async function sendLocation(latitude, longitude) {
+            const busId = busSelect.value;
+            if (!busId) {
+                showMessage('Please select a bus first', 'warning');
+                return false;
+            }
+
+            addDebugLog(`Sending location for bus: ${busId}`);
+            addDebugLog(`Coordinates: ${latitude}, ${longitude}`);
+
+            try {
+                // Use URL encoded format (most reliable across all servers)
+                const formData = new URLSearchParams();
+                formData.append('lat', latitude);
+                formData.append('lng', longitude);
+                
+                const response = await fetch(`/api/buses/${encodeURIComponent(busId)}/location`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData.toString()
+                });
+                
+                addDebugLog(`Response status: ${response.status}`);
+                
+                // Parse response as JSON
+                let data;
+                const responseText = await response.text();
+                addDebugLog(`Response text: ${responseText}`);
+                
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    addDebugLog(`Failed to parse JSON: ${e.message}`);
+                    showMessage('Server error. Please try again.', 'error');
+                    return false;
+                }
+                
+                if (data.success) {
+                    addDebugLog('✅ Location sent successfully');
+                    return true;
+                } else {
+                    addDebugLog(`❌ Server error: ${data.error}`);
+                    showMessage(data.error || 'Failed to update location', 'error');
+                    return false;
+                }
+            } catch (error) {
+                addDebugLog(`❌ Network error: ${error.message}`);
+                console.error('Error sending location:', error);
+                showMessage('Network error. Check server connection.', 'error');
+                return false;
+            }
+        }
+
+        async function testBusExists() {
+            const busId = busSelect.value;
+            if (!busId) return false;
+            
+            try {
+                const response = await fetch('/api/buses');
+                const buses = await response.json();
+                const busExists = buses.some(bus => 
+                    bus.bus_id === busId || bus.bus_name === busId
+                );
+                addDebugLog(`Bus "${busId}" exists in database: ${busExists}`);
+                if (!busExists) {
+                    addDebugLog(`Available buses: ${buses.map(b => b.bus_name).join(', ')}`);
+                }
+                return busExists;
+            } catch (error) {
+                addDebugLog(`Error checking bus: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function startSharing() {
+            const busId = busSelect.value;
+            if (!busId) {
+                showMessage('Please select a bus first', 'warning');
+                return;
+            }
+
+            addDebugLog('=== Starting Location Sharing ===');
+            
+            // First check if driver is approved
+            const isApproved = await checkDriverStatus();
+            if (!isApproved) {
+                showMessage('You are not approved to share location. Please register and wait for admin approval.', 'warning');
+                return;
+            }
+            
+            const busExists = await testBusExists();
+            if (!busExists) {
+                showMessage(`Bus "${busId}" not found. Please select a valid bus.`, 'error');
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                showMessage('Geolocation is not supported by your browser', 'error');
+                return;
+            }
+
+            showMessage('Getting your location...', 'warning');
+            addDebugLog('Requesting geolocation permission...');
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    addDebugLog(`Got location: ${latitude}, ${longitude}`);
+                    showMessage('Sending location to server...', 'warning');
+                    
+                    const success = await sendLocation(latitude, longitude);
+                    
+                    if (success) {
+                        statusBadge.className = 'status-badge status-active';
+                        statusBadge.innerHTML = '<span class="live-dot"></span> LIVE - Sharing';
+                        locationStatus.innerHTML = '<i class="fas fa-location-dot"></i> Broadcasting every 5 seconds';
+                        coordsDisplay.innerHTML = `📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                        showMessage(`Sharing location for ${busId}`);
+                        addDebugLog('✅ Sharing started successfully');
+                        
+                        intervalId = setInterval(() => {
+                            navigator.geolocation.getCurrentPosition(async (pos) => {
+                                const lat = pos.coords.latitude;
+                                const lng = pos.coords.longitude;
+                                await sendLocation(lat, lng);
+                                coordsDisplay.innerHTML = `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                            }, (err) => {
+                                addDebugLog(`Geolocation error: ${err.message}`);
+                                showMessage('Failed to get current location', 'error');
+                            });
+                        }, 5000);
+                        
+                        isSharing = true;
+                        startBtn.disabled = true;
+                        stopBtn.disabled = false;
+                        busSelect.disabled = true;
+                        registerBtn.disabled = true;
+                    } else {
+                        addDebugLog('❌ Failed to start sharing - server rejected');
+                        showMessage('Failed to start sharing. Please try again.', 'error');
+                    }
+                },
+                (error) => {
+                    let errorMsg = '';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = 'Please allow location permission in browser settings';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = 'Location unavailable. Check GPS signal';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = 'Location request timeout. Please try again';
+                            break;
+                        default:
+                            errorMsg = error.message;
+                    }
+                    addDebugLog(`Geolocation error: ${errorMsg}`);
+                    showMessage(errorMsg, 'error');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function stopSharing() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            
+            isSharing = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            busSelect.disabled = false;
+            registerBtn.disabled = false;
+            
+            statusBadge.className = 'status-badge status-inactive';
+            statusBadge.innerHTML = '<i class="fas fa-circle"></i> Not Sharing';
+            locationStatus.innerHTML = '<i class="fas fa-map-marker-alt"></i> Select a bus and click Start';
+            coordsDisplay.innerHTML = '';
+            showMessage('Location sharing stopped');
+            addDebugLog('=== Location sharing stopped ===');
+            
+            // Re-check status when bus changes
+            checkDriverStatus();
+        }
+
+        // When bus selection changes, check driver status
+        busSelect.addEventListener('change', () => {
+            debugInfo.innerHTML = '';
+            debugInfo.style.display = 'none';
+            checkDriverStatus();
+            
+            // Reset sharing if active
+            if (isSharing) {
+                stopSharing();
+            }
+        });
+        
+        // Initial status check when page loads
+        if (busSelect.value) {
+            checkDriverStatus();
+        }
+
+        startBtn.addEventListener('click', startSharing);
+        stopBtn.addEventListener('click', stopSharing);
+        
+        // Initially disable start button until status is checked
+        startBtn.disabled = true;
+    </script>
+</body>
+</html>

@@ -5,40 +5,45 @@ from pymongo.errors import ConnectionFailure
 from bson.objectid import ObjectId
 import os
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
+import json
+from urllib.parse import unquote
 
 # Import blueprints
 from routes.bus_routes import bus_bp
 from routes.stop_routes import stop_bp
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
+    }
+})
 
 # Register blueprints
 app.register_blueprint(bus_bp, url_prefix='/api/buses')
 app.register_blueprint(stop_bp, url_prefix='/stops')
 
-# ========== MONGODB CONNECTION WITH SMART COLLECTION DETECTION ==========
+# ========== MONGODB CONNECTION ==========
 db = None
 stops_collection = None
 buses_collection = None
 connection_success = False
 
 try:
-    # Connect to MongoDB
     client = MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
     client.admin.command('ping')
     db = client["bus_tracker"]
     connection_success = True
     print("✅ Connected to MongoDB successfully!")
     
-    # Check both collections for stops
     stops_count = db.stops.count_documents({})
     busstops_count = db.busstops.count_documents({})
     print(f"📊 Found {stops_count} stops in 'stops' collection")
     print(f"📊 Found {busstops_count} stops in 'busstops' collection")
     
-    # Use busstops collection since it has data
     if busstops_count > 0:
         stops_collection = db.busstops
         print("✅ Using 'busstops' collection for stops data")
@@ -47,33 +52,35 @@ try:
         print("✅ Using 'stops' collection for stops data")
     else:
         stops_collection = None
-        print("⚠️ WARNING: No stops data found in any collection!")
+        print("⚠️ WARNING: No stops data found!")
     
-    # Check buses collection
     buses_collection = db.buses
     print("✅ Using 'buses' collection")
     
-    # Make collections available globally for routes
+    # Create drivers collection if not exists
+    if 'drivers' not in db.list_collection_names():
+        db.create_collection("drivers")
+        print("✅ Created 'drivers' collection")
+    
     app.config['STOPS_COLLECTION'] = stops_collection
     app.config['BUSES_COLLECTION'] = buses_collection
     app.config['DB'] = db
     
-    # Create geospatial index if not exists
     if stops_collection is not None:
         try:
             stops_collection.create_index([("location", "2dsphere")])
-            print("✅ Geospatial index created/verified on stops collection")
+            print("✅ Geospatial index created")
         except Exception as idx_error:
             print(f"⚠️ Could not create index: {idx_error}")
     
 except ConnectionFailure:
-    print("❌ Failed to connect to MongoDB. Make sure MongoDB is running.")
+    print("❌ Failed to connect to MongoDB.")
     stops_collection = None
     db = None
     buses_collection = None
     connection_success = False
 except Exception as e:
-    print(f"❌ MongoDB connection error: {e}")
+    print(f"❌ MongoDB error: {e}")
     stops_collection = None
     db = None
     buses_collection = None
@@ -82,17 +89,14 @@ except Exception as e:
 # ========== HELPER FUNCTIONS ==========
 
 def calculate_distance(lat1, lon1, lat2, lon2):
-    """Calculate distance between two points in kilometers using Haversine formula"""
     R = 6371
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
     dlat = lat2 - lat1
     dlon = lon2 - lon1
     a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
-    c = 2 * math.asin(math.sqrt(a))
-    return R * c
+    return R * 2 * math.asin(math.sqrt(a))
 
 def validate_coordinates(lat, lng):
-    """Validate if coordinates are within valid ranges"""
     try:
         lat = float(lat)
         lng = float(lng)
@@ -106,105 +110,78 @@ def validate_coordinates(lat, lng):
 
 @app.route("/")
 def home():
-    """API Home endpoint with status information"""
     if not connection_success or stops_collection is None or db is None:
-        return jsonify({
-            'message': 'Bus Tracker API is running, but MongoDB is not connected',
-            'status': 'error',
-            'version': '1.0.0',
-            'instructions': 'Make sure MongoDB is running on localhost:27017'
-        }), 503
+        return jsonify({'message': 'API running, MongoDB not connected', 'status': 'error'}), 503
     
     stops_count = stops_collection.count_documents({}) if stops_collection is not None else 0
     buses_count = buses_collection.count_documents({}) if buses_collection is not None else 0
     
     return jsonify({
         'message': 'Bus Tracker API Running 🚀',
-        'version': '1.0.0',
         'status': 'ok',
-        'database': {
-            'stops': stops_count,
-            'buses': buses_count,
-            'collection_used': stops_collection.name if stops_collection is not None else 'none'
-        },
-        'endpoints': [
-            '/dashboard - Web interface',
-            '/buses - Bus booking page',
-            '/stops - All bus stops',
-            '/nearby-stops - Find nearby stops',
-            '/api/buses - Bus information',
-            '/api/buses/search - Search buses with filters',
-            '/api/buses/clear-all-buses - Clear all fake buses',
-            '/api/buses/insert-real-buses - Insert real bus data',
-            '/api/stats - Database statistics',
-            '/test-db - Test database connection'
-        ]
+        'database': {'stops': stops_count, 'buses': buses_count}
     })
 
 @app.route("/dashboard")
 def dashboard():
-    """Dashboard route - serves the HTML interface"""
     return render_template('index.html')
 
 @app.route("/buses")
 def buses_page():
-    """Bus booking page - similar to MakeMyTrip"""
     return render_template('buses.html')
 
 @app.route("/seats")
 def seats_page():
-    """Seat selection page"""
     return render_template('seats.html')
+
+@app.route("/driver")
+def driver_page():
+    return render_template('driver.html')
+
+@app.route("/driver-register")
+def driver_register_page():
+    """Driver registration page"""
+    return render_template('driver-register.html')
+
+@app.route("/admin")
+def admin_page():
+    """Admin approval panel"""
+    return render_template('admin.html')
 
 # ========== OFFER REDIRECT ROUTES ==========
 
 @app.route("/offer/mmt")
 def offer_mmt():
-    """Redirect to MakeMyTrip with MMT offer"""
     return redirect("https://www.makemytrip.com/bus/")
 
 @app.route("/offer/mydeal")
 def offer_mydeal():
-    """Redirect to MakeMyTrip with MyDeal offer"""
     return redirect("https://www.makemytrip.com/bus/")
 
 # ========== STOPS ROUTES ==========
 
 @app.route("/stops-direct")
 def get_stops_direct():
-    """Get all stops directly (fallback if blueprint fails)"""
     if stops_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
     try:
         stops = stops_collection.find().limit(100)
-        
         result = []
         for stop in stops:
             coordinates = stop.get("location", {}).get("coordinates", [])
-            
             result.append({
                 "id": str(stop["_id"]),
                 "name": stop.get("name", "Unknown"),
                 "city": stop.get("city", ""),
-                "location": {
-                    "type": "Point",
-                    "coordinates": coordinates
-                } if coordinates else None,
+                "location": {"type": "Point", "coordinates": coordinates} if coordinates else None,
             })
-        
-        return jsonify({
-            "stops": result,
-            "total": len(result),
-            "source": "direct_endpoint"
-        })
+        return jsonify({"stops": result, "total": len(result)})
     except Exception as e:
-        print(f"Error in get_stops_direct: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/stops")
 def get_stops():
-    """Get all stops with pagination"""
     if stops_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
@@ -219,31 +196,19 @@ def get_stops():
         result = []
         for stop in stops:
             coordinates = stop.get("location", {}).get("coordinates", [])
-            
             result.append({
                 "id": str(stop["_id"]),
                 "name": stop.get("name", "Unknown"),
                 "city": stop.get("city", ""),
-                "location": {
-                    "type": "Point",
-                    "coordinates": coordinates
-                } if coordinates else None,
+                "location": {"type": "Point", "coordinates": coordinates} if coordinates else None,
             })
         
-        return jsonify({
-            "stops": result,
-            "total": total_stops,
-            "page": page,
-            "limit": limit,
-            "has_more": skip + limit < total_stops
-        })
+        return jsonify({"stops": result, "total": total_stops, "page": page, "limit": limit})
     except Exception as e:
-        print(f"Error in get_stops: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/nearby-stops")
 def nearby_stops():
-    """Find stops near given coordinates"""
     if stops_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
@@ -257,15 +222,11 @@ def nearby_stops():
             return jsonify({"error": "Invalid coordinates"}), 400
         
         result = []
-        
         try:
             stops = stops_collection.find({
                 "location": {
                     "$near": {
-                        "$geometry": {
-                            "type": "Point",
-                            "coordinates": [valid_lng, valid_lat]
-                        },
+                        "$geometry": {"type": "Point", "coordinates": [valid_lng, valid_lat]},
                         "$maxDistance": radius
                     }
                 }
@@ -282,10 +243,8 @@ def nearby_stops():
                         "location": {"type": "Point", "coordinates": coordinates},
                         "distance_km": round(distance, 2)
                     })
-            
             result.sort(key=lambda x: x["distance_km"])
-            
-        except Exception as geo_error:
+        except Exception:
             all_stops = list(stops_collection.find())
             for stop in all_stops:
                 coords = stop.get("location", {}).get("coordinates", [])
@@ -302,14 +261,11 @@ def nearby_stops():
             result.sort(key=lambda x: x["distance_km"])
         
         return jsonify(result[:20])
-        
     except Exception as e:
-        print(f"❌ Error in nearby_stops: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/stops/search")
 def search_stops():
-    """Search stops by name or city"""
     if stops_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
@@ -332,20 +288,14 @@ def search_stops():
                 "id": str(stop["_id"]),
                 "name": stop.get("name", "Unknown"),
                 "city": stop.get("city", ""),
-                "location": {
-                    "type": "Point",
-                    "coordinates": coordinates
-                } if coordinates else None
+                "location": {"type": "Point", "coordinates": coordinates} if coordinates else None
             })
-        
         return jsonify(result)
     except Exception as e:
-        print(f"Error in search_stops: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/stops/<stop_id>")
 def get_stop(stop_id):
-    """Get a specific stop by ID"""
     if stops_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
@@ -357,10 +307,7 @@ def get_stop(stop_id):
                 "id": str(stop["_id"]),
                 "name": stop.get("name", "Unknown"),
                 "city": stop.get("city", ""),
-                "location": {
-                    "type": "Point",
-                    "coordinates": coordinates
-                } if coordinates else None
+                "location": {"type": "Point", "coordinates": coordinates} if coordinates else None
             })
         return jsonify({"error": "Stop not found"}), 404
     except Exception as e:
@@ -374,8 +321,7 @@ def get_buses():
         return jsonify({"error": "Database not connected"}), 503
     
     try:
-        buses = buses_collection.find()
-        
+        buses = list(buses_collection.find())
         result = []
         for bus in buses:
             result.append({
@@ -389,45 +335,346 @@ def get_buses():
                 "departure_time": bus.get("departure_time"),
                 "arrival_time": bus.get("arrival_time"),
                 "duration": bus.get("duration"),
-                "available_seats": bus.get("available_seats", bus.get("capacity", 50)),
+                "available_seats": bus.get("available_seats", 50),
                 "rating": bus.get("rating"),
                 "status": bus.get("status", "inactive"),
+                "city": bus.get("city"),
                 "current_location": bus.get("current_location", {})
             })
-        
         return jsonify(result)
     except Exception as e:
         print(f"Error in get_buses: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ========== BUS BOOKING API ENDPOINTS ==========
+# ========== LIVE BUS TRACKING (FIXED - Only actively sharing buses) ==========
 
-@app.route("/api/buses/clear-all-buses", methods=["DELETE"])
-def clear_all_buses():
-    """Clear all existing buses from database"""
+@app.route("/api/buses/live", methods=["GET"])
+def get_live_buses():
+    """Get ONLY buses with recent location updates (active sharing)"""
+    if buses_collection is None:
+        return jsonify([])
+    
+    try:
+        # Only get buses that have current_location coordinates
+        all_buses = list(buses_collection.find({
+            "current_location.coordinates": {"$exists": True, "$ne": []}
+        }))
+        
+        result = []
+        current_time = datetime.now()
+        
+        for bus in all_buses:
+            loc = bus.get("current_location", {})
+            coords = loc.get("coordinates", [])
+            last_updated = bus.get("last_updated")
+            
+            if coords and len(coords) >= 2:
+                # Check if update is recent (within last 5 minutes)
+                is_recent = False
+                if last_updated:
+                    try:
+                        # Parse last_updated string
+                        if isinstance(last_updated, str):
+                            if 'T' in last_updated:
+                                last_dt = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+                            else:
+                                last_dt = datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
+                        else:
+                            last_dt = last_updated
+                        
+                        if isinstance(last_dt, datetime):
+                            time_diff = (current_time - last_dt).total_seconds()
+                            is_recent = time_diff < 300  # 5 minutes = 300 seconds
+                    except Exception as e:
+                        print(f"Error parsing date for {bus.get('bus_name')}: {e}")
+                        is_recent = False  # If can't parse, don't show
+                
+                # Only include if location is recent
+                if is_recent:
+                    result.append({
+                        "id": str(bus["_id"]),
+                        "bus_id": bus.get("bus_id", bus.get("bus_name", "Unknown")),
+                        "bus_name": bus.get("bus_name", "Unknown"),
+                        "route_name": bus.get("route_name", "On Route"),
+                        "city": bus.get("city", "Gujarat"),
+                        "available_seats": bus.get("available_seats", 0),
+                        "lat": coords[1],
+                        "lng": coords[0],
+                        "last_updated": last_updated if last_updated else "Just now"
+                    })
+        
+        print(f"📍 Found {len(result)} actively sharing buses (updated in last 5 minutes)")
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in get_live_buses: {e}")
+        return jsonify([]), 500
+
+# FIXED - Location update endpoint with proper URL decoding
+@app.route("/api/buses/<path:bus_id>/location", methods=["POST", "OPTIONS"])
+def update_bus_location(bus_id):
+    """Update bus location - works with any bus ID format"""
+    if request.method == "OPTIONS":
+        return "", 200
+        
     if buses_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
     try:
-        result = buses_collection.delete_many({})
+        # Decode URL encoded bus_id
+        decoded_bus_id = unquote(bus_id)
+        print(f"\n=== LOCATION UPDATE ===")
+        print(f"Original Bus ID: {bus_id}")
+        print(f"Decoded Bus ID: {decoded_bus_id}")
+        
+        # Get raw data
+        raw_data = request.get_data(as_text=True)
+        print(f"Raw data: {raw_data}")
+        print(f"Content-Type: {request.content_type}")
+        
+        data = {}
+        
+        # Parse data regardless of content type
+        if raw_data:
+            # Try JSON
+            try:
+                data = json.loads(raw_data)
+                print(f"Parsed as JSON: {data}")
+            except:
+                # Try URL encoded
+                try:
+                    from urllib.parse import parse_qs
+                    parsed = parse_qs(raw_data)
+                    data = {k: v[0] for k, v in parsed.items()}
+                    print(f"Parsed as URL encoded: {data}")
+                except:
+                    pass
+        
+        if not data:
+            return jsonify({"error": "No valid data received"}), 400
+        
+        # Get lat/lng
+        lat = data.get('lat') or data.get('latitude')
+        lng = data.get('lng') or data.get('longitude')
+        
+        if lat is None or lng is None:
+            return jsonify({
+                "error": "Missing lat/lng",
+                "received_keys": list(data.keys())
+            }), 400
+        
+        lat = float(lat)
+        lng = float(lng)
+        
+        # Validate coordinates
+        if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+            return jsonify({"error": "Invalid coordinates"}), 400
+        
+        # Find bus by bus_id OR bus_name (case insensitive)
+        bus = buses_collection.find_one({
+            "$or": [
+                {"bus_id": {"$regex": f"^{decoded_bus_id}$", "$options": "i"}},
+                {"bus_name": {"$regex": f"^{decoded_bus_id}$", "$options": "i"}}
+            ]
+        })
+        
+        if not bus:
+            # List available buses for debugging
+            available = list(buses_collection.find({}, {"bus_name": 1, "bus_id": 1}))
+            print(f"Available buses: {available}")
+            return jsonify({
+                "error": f"Bus '{decoded_bus_id}' not found",
+                "available_buses": [b.get("bus_name") for b in available]
+            }), 404
+        
+        # Update location with timestamp
+        buses_collection.update_one(
+            {"_id": bus["_id"]},
+            {
+                "$set": {
+                    "current_location": {
+                        "type": "Point",
+                        "coordinates": [lng, lat]
+                    },
+                    "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "status": "active"
+                }
+            }
+        )
+        
+        print(f"✅ Updated: {bus.get('bus_name')} at ({lat}, {lng})")
+        
         return jsonify({
             "success": True,
-            "message": f"Deleted {result.deleted_count} buses"
+            "bus_id": bus.get("bus_name"),
+            "lat": lat,
+            "lng": lng,
+            "message": "Location updated successfully"
         })
     except Exception as e:
-        print(f"Error clearing buses: {e}")
+        print(f"❌ Error: {e}")
         return jsonify({"error": str(e)}), 500
+
+# ========== DRIVER MANAGEMENT ENDPOINTS ==========
+
+@app.route("/api/drivers/register", methods=["POST"])
+def register_driver():
+    """Driver registration request"""
+    if db is None:
+        return jsonify({"error": "Database not connected"}), 503
+    
+    try:
+        data = request.get_json()
+        
+        existing = db.drivers.find_one({"bus_id": data.get('bus_id')})
+        if existing:
+            return jsonify({
+                "success": False,
+                "message": f"Bus '{data.get('bus_id')}' already registered. Status: {existing.get('status')}"
+            }), 400
+        
+        driver = {
+            "bus_id": data.get('bus_id'),
+            "bus_name": data.get('bus_name'),
+            "driver_name": data.get('driver_name'),
+            "phone": data.get('phone'),
+            "email": data.get('email'),
+            "status": "pending",
+            "requested_at": datetime.now(),
+            "approved_by": None,
+            "approved_at": None
+        }
+        
+        db.drivers.insert_one(driver)
+        
+        return jsonify({
+            "success": True,
+            "message": "Registration request submitted. Waiting for admin approval.",
+            "status": "pending"
+        })
+    except Exception as e:
+        print(f"Error in register_driver: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/drivers/status/<bus_id>", methods=["GET"])
+def get_driver_status(bus_id):
+    """Check driver approval status"""
+    if db is None:
+        return jsonify({"error": "Database not connected"}), 503
+    
+    try:
+        driver = db.drivers.find_one({"bus_id": bus_id})
+        
+        if not driver:
+            return jsonify({
+                "registered": False,
+                "status": "not_registered",
+                "message": "Please register first"
+            })
+        
+        return jsonify({
+            "registered": True,
+            "status": driver.get("status"),
+            "bus_id": driver.get("bus_id"),
+            "bus_name": driver.get("bus_name"),
+            "driver_name": driver.get("driver_name"),
+            "requested_at": driver.get("requested_at").isoformat() if driver.get("requested_at") else None,
+            "approved_at": driver.get("approved_at").isoformat() if driver.get("approved_at") else None
+        })
+    except Exception as e:
+        print(f"Error in get_driver_status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/drivers/pending", methods=["GET"])
+def get_pending_drivers():
+    """Get all pending driver requests (Admin only)"""
+    if db is None:
+        return jsonify({"error": "Database not connected"}), 503
+    
+    try:
+        pending = list(db.drivers.find({"status": "pending"}))
+        
+        result = []
+        for driver in pending:
+            result.append({
+                "id": str(driver["_id"]),
+                "bus_id": driver.get("bus_id"),
+                "bus_name": driver.get("bus_name"),
+                "driver_name": driver.get("driver_name"),
+                "phone": driver.get("phone"),
+                "email": driver.get("email"),
+                "requested_at": driver.get("requested_at").isoformat() if driver.get("requested_at") else None
+            })
+        
+        return jsonify({
+            "drivers": result,
+            "count": len(result)
+        })
+    except Exception as e:
+        print(f"Error in get_pending_drivers: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/drivers/approve/<driver_id>", methods=["POST"])
+def approve_driver(driver_id):
+    """Approve a driver request (Admin only)"""
+    if db is None:
+        return jsonify({"error": "Database not connected"}), 503
+    
+    try:
+        result = db.drivers.update_one(
+            {"_id": ObjectId(driver_id)},
+            {
+                "$set": {
+                    "status": "approved",
+                    "approved_by": "admin",
+                    "approved_at": datetime.now()
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({"success": True, "message": "Driver approved successfully"})
+        else:
+            return jsonify({"success": False, "message": "Driver not found"}), 404
+    except Exception as e:
+        print(f"Error in approve_driver: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/drivers/reject/<driver_id>", methods=["POST"])
+def reject_driver(driver_id):
+    """Reject a driver request (Admin only)"""
+    if db is None:
+        return jsonify({"error": "Database not connected"}), 503
+    
+    try:
+        result = db.drivers.update_one(
+            {"_id": ObjectId(driver_id)},
+            {
+                "$set": {
+                    "status": "rejected",
+                    "approved_by": "admin",
+                    "approved_at": datetime.now()
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({"success": True, "message": "Driver rejected"})
+        else:
+            return jsonify({"success": False, "message": "Driver not found"}), 404
+    except Exception as e:
+        print(f"Error in reject_driver: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ========== BUS BOOKING API ENDPOINTS ==========
 
 @app.route("/api/buses/search")
 def search_buses_api():
-    """Search buses with filters and pagination"""
     if buses_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
     try:
         from_city = request.args.get('from', '')
         to_city = request.args.get('to', '')
-        date = request.args.get('date', '')
         ac_type = request.args.get('ac_type', '')
         seat_type = request.args.get('seat_type', '')
         page = int(request.args.get('page', 1))
@@ -436,22 +683,17 @@ def search_buses_api():
         sort_order = request.args.get('sort_order', 'asc')
         
         skip = (page - 1) * limit
-        
-        # Build query
         query = {}
         
         if from_city:
             query['from_city'] = {'$regex': from_city, '$options': 'i'}
         if to_city:
             query['to_city'] = {'$regex': to_city, '$options': 'i'}
-        
         if ac_type:
             query['ac_type'] = ac_type
-        
         if seat_type:
             query['seat_type'] = seat_type
         
-        # Build sort
         sort_field = {
             'price': 'price',
             'rating': 'rating',
@@ -500,257 +742,73 @@ def search_buses_api():
             "total_pages": (total_buses + limit - 1) // limit,
             "has_more": skip + limit < total_buses
         })
-        
     except Exception as e:
-        print(f"Error in search_buses_api: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/buses/insert-real-buses", methods=["POST"])
-def insert_real_buses():
-    """Insert the real bus data from the screenshots"""
+@app.route("/api/buses/test", methods=["GET"])
+def test_buses_endpoint():
     if buses_collection is None:
-        return jsonify({"error": "Database not connected"}), 503
+        return jsonify({"error": "Buses collection not available"}), 503
     
     try:
-        # Real bus data from screenshots (ONLY THESE 4 BUSES)
-        real_buses = [
-            {
-                "bus_name": "VISHWAKARMA TRAVELS",
-                "operator_name": "VISHWAKARMA TRAVELS",
-                "ac_type": "NON A/C",
-                "seat_type": "Sleeper",
-                "price": 5000,
-                "original_price": 5000,
-                "discount": 0,
-                "from_city": "Bhilad",
-                "to_city": "Vapi",
-                "departure_time": "13:15",
-                "arrival_time": "13:45",
-                "duration": "00h 30m",
-                "available_seats": 37,
-                "single_seats": 11,
-                "rating": 4.2,
-                "reviews_count": 234,
-                "amenities": ["Water Bottle", "Charging Point", "Reading Light"],
-                "pickup_points": ["Bhilad (Naroli Fatak) - Giriraj Kathiyawadi Hotel", "Bhilad Hanuman Mandir", "Bhilad Railway Station Highway"],
-                "drop_points": ["Vapi (Gunjan Chokdi NH-48) - Hotel Pappilion", "Gunjan Chokdi", "Vapi Ayush Hospital"],
-                "cancellation_policy": "Partial cancellation not allowed",
-                "cancellation_policy_details": {
-                    "more_than_24hrs": {"percentage": 50, "amount": 2500},
-                    "12_to_24hrs": {"percentage": 80, "amount": 4000},
-                    "0_to_12hrs": {"percentage": 100, "amount": 5000}
-                },
-                "travel_policy": {
-                    "child_passenger": "Children above age 5 need ticket",
-                    "luggage": "2 pieces free, excess chargeable",
-                    "pets": "Not allowed",
-                    "liquor": "Prohibited",
-                    "pickup_time": "Operator not obligated to wait"
-                },
-                "is_prime": False,
-                "status": "active"
-            },
-            {
-                "bus_name": "JAY KHODIYAR BUS SERVICE",
-                "operator_name": "JAY KHODIYAR BUS SERVICE",
-                "ac_type": "NON A/C",
-                "seat_type": "Sleeper",
-                "price": 1890,
-                "original_price": 2100,
-                "discount": 210,
-                "from_city": "Bhilad",
-                "to_city": "Vapi",
-                "departure_time": "03:00",
-                "arrival_time": "03:30",
-                "duration": "00h 30m",
-                "available_seats": 32,
-                "single_seats": 10,
-                "rating": 4.5,
-                "reviews_count": 567,
-                "amenities": ["Water Bottle", "Charging Point", "Reading Light", "Blanket"],
-                "pickup_points": ["Bhilad (Naroli Fatak) - Giriraj Kathiyawadi Hotel", "Bhilad Hanuman Mandir"],
-                "drop_points": ["Vapi (Gunjan Chokdi NH-48) - Hotel Pappilion", "GUNJAN CHOKDI, HIGHWAY", "Vapi Ayush Hospital"],
-                "cancellation_policy": "Free cancellation available",
-                "cancellation_policy_details": {
-                    "more_than_24hrs": {"percentage": 15, "amount": 375},
-                    "12_to_24hrs": {"percentage": 20, "amount": 500},
-                    "4_to_12hrs": {"percentage": 50, "amount": 1250},
-                    "0_to_4hrs": {"percentage": 100, "amount": 2500}
-                },
-                "travel_policy": {
-                    "child_passenger": "Children above age 5 need ticket",
-                    "luggage": "2 pieces free, excess chargeable",
-                    "pets": "Not allowed",
-                    "liquor": "Prohibited",
-                    "pickup_time": "Operator not obligated to wait"
-                },
-                "is_prime": True,
-                "status": "active"
-            },
-            {
-                "bus_name": "Jay Travels (Ekta Travels)",
-                "operator_name": "Jay Travels (Ekta Travels)",
-                "ac_type": "NON A/C",
-                "seat_type": "Sleeper",
-                "price": 900,
-                "original_price": 900,
-                "discount": 0,
-                "from_city": "Bhilad",
-                "to_city": "Vapi",
-                "departure_time": "16:45",
-                "arrival_time": "17:00",
-                "duration": "00h 15m",
-                "available_seats": 32,
-                "single_seats": 10,
-                "rating": 4.1,
-                "reviews_count": 345,
-                "amenities": ["Charging Point", "Reading Light"],
-                "pickup_points": ["Bhilad (Naroli Fatak) - Giriraj Kathiyawadi Hotel"],
-                "drop_points": ["Vapi (Gunjan Chokdi NH-48) - Hotel Pappilion"],
-                "cancellation_policy": "Partial cancellation not allowed",
-                "cancellation_policy_details": {
-                    "more_than_48hrs": {"percentage": 10, "amount": 90},
-                    "24_to_48hrs": {"percentage": 20, "amount": 180},
-                    "12_to_24hrs": {"percentage": 40, "amount": 360},
-                    "8_to_12hrs": {"percentage": 50, "amount": 450},
-                    "0_to_8hrs": {"percentage": 100, "amount": 900}
-                },
-                "travel_policy": {
-                    "child_passenger": "Children above age 5 need ticket",
-                    "luggage": "2 pieces free, excess chargeable",
-                    "pets": "Not allowed",
-                    "liquor": "Prohibited"
-                },
-                "is_prime": True,
-                "status": "active"
-            },
-            {
-                "bus_name": "J K travels",
-                "operator_name": "J K travels",
-                "ac_type": "NON A/C",
-                "seat_type": "Sleeper",
-                "price": 1500,
-                "original_price": 1500,
-                "discount": 0,
-                "from_city": "Bhilad",
-                "to_city": "Vapi",
-                "departure_time": "18:30",
-                "arrival_time": "18:55",
-                "duration": "00h 25m",
-                "available_seats": 45,
-                "single_seats": 15,
-                "rating": 3.9,
-                "reviews_count": 189,
-                "amenities": ["Water Bottle", "Charging Point"],
-                "pickup_points": ["Bhilad Bus Stand", "Bhilad Chokdi"],
-                "drop_points": ["Vapi Bus Stand", "Vapi Railway Station"],
-                "cancellation_policy": "Free cancellation up to 6 hours",
-                "travel_policy": {
-                    "child_passenger": "Children above age 5 need ticket",
-                    "luggage": "2 pieces free",
-                    "pets": "Not allowed"
-                },
-                "is_prime": False,
-                "status": "active"
-            }
-        ]
-        
-        # Clear existing buses first
-        deleted_count = buses_collection.delete_many({}).deleted_count
-        
-        # Insert real buses
-        buses_collection.insert_many(real_buses)
-        
+        count = buses_collection.count_documents({})
+        sample = buses_collection.find_one()
         return jsonify({
-            "success": True,
-            "message": f"Deleted {deleted_count} fake buses and inserted {len(real_buses)} real buses",
-            "total_buses": len(real_buses)
+            "status": "ok",
+            "buses_count": count,
+            "sample_bus": sample.get("bus_name") if sample else None
         })
-        
     except Exception as e:
-        print(f"Error inserting real buses: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ========== STATISTICS ROUTES ==========
 
 @app.route("/api/stats")
 def get_stats():
-    """Get statistics about stops and buses"""
     if stops_collection is None:
         return jsonify({"error": "Database not connected"}), 503
     
     try:
         stops_count = stops_collection.count_documents({})
-        
         cities = stops_collection.aggregate([
             {"$match": {"city": {"$exists": True, "$ne": None, "$ne": ""}}},
             {"$group": {"_id": "$city", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": 10}
         ])
-        
-        cities_list = []
-        for city in cities:
-            if city["_id"]:
-                cities_list.append({"city": city["_id"], "stops": city["count"]})
-        
-        buses_count = buses_collection.count_documents({}) if buses_collection is not None else 0
-        active_buses = buses_collection.count_documents({"status": "active"}) if buses_collection is not None else 0
+        cities_list = [{"city": c["_id"], "stops": c["count"]} for c in cities if c["_id"]]
+        buses_count = buses_collection.count_documents({}) if buses_collection else 0
+        active_buses = buses_collection.count_documents({"status": "active"}) if buses_collection else 0
         
         return jsonify({
             "total_stops": stops_count,
             "total_buses": buses_count,
             "active_buses": active_buses,
-            "top_cities": cities_list,
-            "collection_used": stops_collection.name if stops_collection is not None else "none"
+            "top_cities": cities_list
         })
     except Exception as e:
-        print(f"Error in get_stats: {e}")
         return jsonify({"error": str(e)}), 500
-
-# ========== TEST ROUTES ==========
 
 @app.route("/test-db")
 def test_db():
-    """Test database connection and data"""
     if not connection_success:
         return jsonify({"error": "Database not connected"}), 503
     
-    result = {
-        "connected": True,
-        "database": "bus_tracker",
-        "collections": {}
-    }
+    result = {"connected": True, "database": "bus_tracker"}
     
-    if stops_collection is not None:
-        sample_stop = stops_collection.find_one()
-        result["collections"]["stops"] = {
+    if stops_collection:
+        sample = stops_collection.find_one()
+        result["stops"] = {
             "count": stops_collection.count_documents({}),
-            "has_data": sample_stop is not None,
-            "collection_name": stops_collection.name,
-            "sample": {
-                "id": str(sample_stop["_id"]) if sample_stop else None,
-                "name": sample_stop.get("name") if sample_stop else None
-            } if sample_stop else None
-        }
-    else:
-        result["collections"]["stops"] = {
-            "error": "No stops collection available"
+            "collection": stops_collection.name,
+            "sample_name": sample.get("name") if sample else None
         }
     
-    if buses_collection is not None:
-        sample_bus = buses_collection.find_one()
-        result["collections"]["buses"] = {
+    if buses_collection:
+        sample = buses_collection.find_one()
+        result["buses"] = {
             "count": buses_collection.count_documents({}),
-            "has_data": sample_bus is not None,
-            "sample": {
-                "id": str(sample_bus["_id"]) if sample_bus else None,
-                "bus_name": sample_bus.get("bus_name") if sample_bus else None
-            } if sample_bus else None
-        }
-    else:
-        result["collections"]["buses"] = {
-            "error": "No buses collection available"
+            "sample_name": sample.get("bus_name") if sample else None
         }
     
     return jsonify(result)
@@ -772,16 +830,16 @@ if __name__ == "__main__":
     print("="*50)
     
     if connection_success and stops_collection is not None:
-        print(f"✅ Database ready with {stops_collection.count_documents({})} stops in '{stops_collection.name}' collection")
+        print(f"✅ Database ready with {stops_collection.count_documents({})} stops")
     else:
-        print("⚠️ Running without database - some features will not work")
+        print("⚠️ Running without database")
     
-    print("\n📱 Access the app at: http://127.0.0.1:5000/")
-    print("🚌 Bus Booking Page: http://127.0.0.1:5000/buses")
-    print("📍 Dashboard: http://127.0.0.1:5000/dashboard")
+    print("\n📱 Dashboard: http://127.0.0.1:5000/dashboard")
+    print("🚌 Bus Booking: http://127.0.0.1:5000/buses")
+    print("🚗 Driver Mode: http://127.0.0.1:5000/driver")
+    print("📝 Driver Registration: http://127.0.0.1:5000/driver-register")
+    print("👑 Admin Panel: http://127.0.0.1:5000/admin")
     print("🎫 Seat Selection: http://127.0.0.1:5000/seats")
-    print("🔧 API endpoints available at: http://127.0.0.1:5000/")
-    print("🧪 Test database: http://127.0.0.1:5000/test-db")
     print("="*50 + "\n")
     
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    app.run(debug=False, host='127.0.0.1', port=5000)

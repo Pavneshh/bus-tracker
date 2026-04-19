@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Registration | Bus Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .register-container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .header i {
+            font-size: 3rem;
+            color: #f59e0b;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            margin-top: 0.5rem;
+            color: #1e293b;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #475569;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #f59e0b;
+        }
+        .btn {
+            width: 100%;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 40px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+        .btn-register {
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            color: white;
+        }
+        .btn-back {
+            background: #e2e8f0;
+            color: #475569;
+            margin-top: 0.5rem;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .message {
+            padding: 0.75rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        .success {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .info {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="header">
+            <i class="fas fa-id-card"></i>
+            <h1>Driver Registration</h1>
+            <p style="color: #64748b;">Register to start sharing location</p>
+        </div>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label><i class="fas fa-bus"></i> Select Bus</label>
+                <select id="busSelect" required>
+                    <option value="">-- Select Bus --</option>
+                    <option value="VISHWAKARMA TRAVELS">VISHWAKARMA TRAVELS</option>
+                    <option value="JAY KHODIYAR BUS SERVICE">JAY KHODIYAR BUS SERVICE</option>
+                    <option value="Jay Travels (Ekta Travels)">Jay Travels (Ekta Travels)</option>
+                    <option value="J K travels">J K travels</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-user"></i> Driver Name</label>
+                <input type="text" id="driverName" placeholder="Enter your full name" required>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-phone"></i> Phone Number</label>
+                <input type="tel" id="phone" placeholder="Enter mobile number" required>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-envelope"></i> Email (Optional)</label>
+                <input type="email" id="email" placeholder="Enter email address">
+            </div>
+
+            <button type="submit" class="btn btn-register">
+                <i class="fas fa-paper-plane"></i> Submit Registration
+            </button>
+        </form>
+
+        <button class="btn btn-back" onclick="window.location.href='/driver'">
+            <i class="fas fa-arrow-left"></i> Back to Driver Mode
+        </button>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const registerForm = document.getElementById('registerForm');
+        const messageDiv = document.getElementById('message');
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const busSelect = document.getElementById('busSelect');
+            const busId = busSelect.value;
+            const busName = busSelect.options[busSelect.selectedIndex]?.text;
+            const driverName = document.getElementById('driverName').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+
+            if (!busId || !driverName || !phone) {
+                showMessage('Please fill all required fields', 'error');
+                return;
+            }
+
+            showMessage('Submitting registration...', 'info');
+
+            try {
+                const response = await fetch('/api/drivers/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        bus_id: busId,
+                        bus_name: busName,
+                        driver_name: driverName,
+                        phone: phone,
+                        email: email
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('✅ Registration submitted! Waiting for admin approval.', 'success');
+                    registerForm.reset();
+                    setTimeout(() => {
+                        window.location.href = '/driver';
+                    }, 3000);
+                } else {
+                    showMessage(data.message || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        });
+
+        function showMessage(text, type) {
+            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => {
+                if (messageDiv.innerHTML === `<div class="message ${type}">${text}</div>`) {
+                    messageDiv.innerHTML = '';
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

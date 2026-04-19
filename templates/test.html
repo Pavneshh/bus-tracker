@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API</title>
+</head>
+<body>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="result"></pre>
+    <script>
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/buses/VISHWAKARMA%20TRAVELS/location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lat: 20.383275, lng: 72.930816 })
+                });
+                const data = await response.json();
+                document.getElementById('result').innerHTML = JSON.stringify(data, null, 2);
+            } catch(err) {
+                document.getElementById('result').innerHTML = err.message;
+            }
+        }
+    </script>
+</body>
+</html>
