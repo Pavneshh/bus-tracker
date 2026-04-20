@@ -8,6 +8,10 @@ import math
 from datetime import datetime, timedelta
 import json
 from urllib.parse import unquote
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Import blueprints
 from routes.bus_routes import bus_bp
@@ -26,65 +30,87 @@ CORS(app, resources={
 app.register_blueprint(bus_bp, url_prefix='/api/buses')
 app.register_blueprint(stop_bp, url_prefix='/stops')
 
-# ========== MONGODB CONNECTION ==========
+# ========== MONGODB CONNECTION (CLOUD ATLAS) ==========
 db = None
 stops_collection = None
 buses_collection = None
 connection_success = False
 
-try:
-    client = MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
-    client.admin.command('ping')
-    db = client["bus_tracker"]
-    connection_success = True
-    print("✅ Connected to MongoDB successfully!")
-    
-    stops_count = db.stops.count_documents({})
-    busstops_count = db.busstops.count_documents({})
-    print(f"📊 Found {stops_count} stops in 'stops' collection")
-    print(f"📊 Found {busstops_count} stops in 'busstops' collection")
-    
-    if busstops_count > 0:
-        stops_collection = db.busstops
-        print("✅ Using 'busstops' collection for stops data")
-    elif stops_count > 0:
-        stops_collection = db.stops
-        print("✅ Using 'stops' collection for stops data")
-    else:
+# Get MongoDB URI from environment variable
+MONGO_URI = os.getenv('MONGO_URI')
+
+if not MONGO_URI:
+    print("❌ MONGO_URI not found in environment variables!")
+    print("   Please set MONGO_URI in .env file or Render environment variables")
+else:
+    try:
+        print(f"🔗 Connecting to MongoDB Atlas...")
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=10000)
+        # Test connection
+        client.admin.command('ping')
+        db = client["bus_tracker"]
+        connection_success = True
+        print("✅ Connected to MongoDB Atlas successfully!")
+        
+        # Check stops in different possible collections
+        stops_count = db.stops.count_documents({}) if 'stops' in db.list_collection_names() else 0
+        busstops_count = db.busstops.count_documents({}) if 'busstops' in db.list_collection_names() else 0
+        print(f"📊 Found {stops_count} stops in 'stops' collection")
+        print(f"📊 Found {busstops_count} stops in 'busstops' collection")
+        
+        if busstops_count > 0:
+            stops_collection = db.busstops
+            print("✅ Using 'busstops' collection for stops data")
+        elif stops_count > 0:
+            stops_collection = db.stops
+            print("✅ Using 'stops' collection for stops data")
+        else:
+            stops_collection = None
+            print("⚠️ WARNING: No stops data found! Please import your stops data.")
+        
+        # Get buses collection
+        if 'buses' in db.list_collection_names():
+            buses_collection = db.buses
+            print(f"✅ Using 'buses' collection with {buses_collection.count_documents({})} buses")
+        else:
+            buses_collection = None
+            print("⚠️ WARNING: No 'buses' collection found!")
+        
+        # Create drivers collection if not exists
+        if 'drivers' not in db.list_collection_names():
+            db.create_collection("drivers")
+            print("✅ Created 'drivers' collection")
+        else:
+            print(f"✅ 'drivers' collection already exists with {db.drivers.count_documents({})} records")
+        
+        app.config['STOPS_COLLECTION'] = stops_collection
+        app.config['BUSES_COLLECTION'] = buses_collection
+        app.config['DB'] = db
+        
+        # Create geospatial index if stops collection exists
+        if stops_collection is not None:
+            try:
+                stops_collection.create_index([("location", "2dsphere")])
+                print("✅ Geospatial index created on stops collection")
+            except Exception as idx_error:
+                print(f"⚠️ Could not create index: {idx_error}")
+        
+    except ConnectionFailure as e:
+        print(f"❌ Failed to connect to MongoDB Atlas: {e}")
+        print("   Please check:")
+        print("   1. MONGO_URI is correct")
+        print("   2. Network access allows your IP (0.0.0.0/0)")
+        print("   3. Username/password are correct")
         stops_collection = None
-        print("⚠️ WARNING: No stops data found!")
-    
-    buses_collection = db.buses
-    print("✅ Using 'buses' collection")
-    
-    # Create drivers collection if not exists
-    if 'drivers' not in db.list_collection_names():
-        db.create_collection("drivers")
-        print("✅ Created 'drivers' collection")
-    
-    app.config['STOPS_COLLECTION'] = stops_collection
-    app.config['BUSES_COLLECTION'] = buses_collection
-    app.config['DB'] = db
-    
-    if stops_collection is not None:
-        try:
-            stops_collection.create_index([("location", "2dsphere")])
-            print("✅ Geospatial index created")
-        except Exception as idx_error:
-            print(f"⚠️ Could not create index: {idx_error}")
-    
-except ConnectionFailure:
-    print("❌ Failed to connect to MongoDB.")
-    stops_collection = None
-    db = None
-    buses_collection = None
-    connection_success = False
-except Exception as e:
-    print(f"❌ MongoDB error: {e}")
-    stops_collection = None
-    db = None
-    buses_collection = None
-    connection_success = False
+        db = None
+        buses_collection = None
+        connection_success = False
+    except Exception as e:
+        print(f"❌ MongoDB error: {e}")
+        stops_collection = None
+        db = None
+        buses_collection = None
+        connection_success = False
 
 # ========== HELPER FUNCTIONS ==========
 
@@ -842,4 +868,4 @@ if __name__ == "__main__":
     print("🎫 Seat Selection: http://127.0.0.1:5000/seats")
     print("="*50 + "\n")
     
-    app.run(debug=False, host='127.0.0.1', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
