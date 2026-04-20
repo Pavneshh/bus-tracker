@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>Driver Mode - Share Live Location</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -11,87 +11,124 @@
             padding: 0;
             box-sizing: border-box;
         }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #1e293b, #0f172a);
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
         }
+        
         .driver-container {
             max-width: 500px;
             margin: 0 auto;
             background: white;
-            border-radius: 24px;
-            padding: 2rem;
+            border-radius: 28px;
+            padding: 20px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
+        
         .header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 24px;
         }
+        
         .header i {
-            font-size: 3rem;
+            font-size: 2.5rem;
             color: #f59e0b;
         }
+        
         .header h1 {
-            font-size: 1.5rem;
-            margin-top: 0.5rem;
+            font-size: 1.4rem;
+            margin-top: 8px;
             color: #1e293b;
         }
-        .bus-select {
-            margin-bottom: 1.5rem;
+        
+        .header p {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 4px;
         }
+        
+        .bus-select {
+            margin-bottom: 20px;
+        }
+        
         .bus-select label {
             display: block;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 8px;
             color: #475569;
+            font-size: 0.85rem;
         }
+        
+        .bus-select label i {
+            margin-right: 6px;
+            color: #667eea;
+        }
+        
         .bus-select select {
             width: 100%;
-            padding: 0.75rem;
+            padding: 14px;
             border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
             background: white;
             cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
         }
+        
+        .bus-select select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        
         .status-card {
             background: #f8fafc;
-            border-radius: 16px;
-            padding: 1.5rem;
+            border-radius: 20px;
+            padding: 20px;
             text-align: center;
-            margin: 1.5rem 0;
+            margin: 20px 0;
         }
+        
         .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 0.5rem 1rem;
+            padding: 8px 16px;
             border-radius: 50px;
             font-weight: 600;
-            margin-bottom: 1rem;
+            margin-bottom: 16px;
+            font-size: 0.85rem;
         }
+        
         .status-active {
             background: #dcfce7;
             color: #15803d;
         }
+        
         .status-inactive {
             background: #fee2e2;
             color: #dc2626;
         }
+        
         .status-pending {
             background: #fef3c7;
             color: #92400e;
         }
+        
         .status-approved {
             background: #dcfce7;
             color: #15803d;
         }
+        
         .status-rejected {
             background: #fee2e2;
             color: #dc2626;
         }
+        
         .live-dot {
             width: 10px;
             height: 10px;
@@ -100,89 +137,142 @@
             animation: blink 1.5s infinite;
             display: inline-block;
         }
+        
         @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
+        
+        #locationStatus {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        
+        .coords {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-top: 8px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        
         .btn {
             width: 100%;
-            padding: 0.8rem;
+            padding: 14px;
             border: none;
-            border-radius: 40px;
+            border-radius: 50px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s;
-            font-size: 1rem;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            font-family: inherit;
+            min-height: 52px;
+            touch-action: manipulation;
         }
+        
         .btn-start {
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
         }
+        
         .btn-stop {
             background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
-            margin-top: 0.75rem;
+            margin-top: 12px;
         }
+        
         .btn-register {
             background: linear-gradient(135deg, #f59e0b, #fbbf24);
             color: white;
-            margin-top: 0.75rem;
+            margin-top: 12px;
         }
+        
         .btn-start:disabled, .btn-stop:disabled, .btn-register:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
         }
-        .coords {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-top: 0.5rem;
-            font-family: monospace;
-        }
+        
         .success-msg {
             background: #dcfce7;
             color: #15803d;
-            padding: 0.5rem;
-            border-radius: 8px;
+            padding: 10px;
+            border-radius: 12px;
             font-size: 0.75rem;
-            margin-top: 0.5rem;
+            margin-top: 8px;
         }
+        
         .error-msg {
             background: #fee2e2;
             color: #dc2626;
-            padding: 0.5rem;
-            border-radius: 8px;
+            padding: 10px;
+            border-radius: 12px;
             font-size: 0.75rem;
-            margin-top: 0.5rem;
+            margin-top: 8px;
         }
+        
         .warning-msg {
             background: #fef3c7;
             color: #92400e;
-            padding: 0.5rem;
-            border-radius: 8px;
+            padding: 10px;
+            border-radius: 12px;
             font-size: 0.75rem;
-            margin-top: 0.5rem;
+            margin-top: 8px;
         }
+        
         .debug-info {
             background: #e0e7ff;
             color: #3730a3;
-            padding: 0.5rem;
-            border-radius: 8px;
-            font-size: 0.7rem;
-            margin-top: 0.5rem;
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            margin-top: 12px;
             font-family: monospace;
             text-align: left;
             display: none;
+            max-height: 150px;
+            overflow-y: auto;
         }
+        
         .status-info {
             font-size: 0.7rem;
-            margin-top: 0.5rem;
-            padding: 0.5rem;
-            border-radius: 8px;
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 12px;
+        }
+        
+        /* Tablet and Desktop */
+        @media (min-width: 768px) {
+            body {
+                padding: 24px;
+            }
+            
+            .driver-container {
+                padding: 28px;
+            }
+            
+            .header i {
+                font-size: 3rem;
+            }
+            
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .btn {
+                padding: 14px;
+                font-size: 1rem;
+            }
+        }
+        
+        /* Touch-friendly */
+        button, select {
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -191,7 +281,7 @@
         <div class="header">
             <i class="fas fa-steering-wheel"></i>
             <h1>Driver Mode</h1>
-            <p style="color: #64748b;">Share your live location</p>
+            <p>Share your live location</p>
         </div>
 
         <div class="bus-select">
@@ -264,7 +354,6 @@
             }, 5000);
         }
 
-        // Check driver registration and approval status
         async function checkDriverStatus() {
             const busId = busSelect.value;
             if (!busId) {
@@ -281,7 +370,7 @@
                 
                 if (!data.registered) {
                     driverStatusInfo.innerHTML = `
-                        <div style="background: #fef3c7; padding: 0.5rem; border-radius: 8px; color: #92400e;">
+                        <div style="background: #fef3c7; padding: 10px; border-radius: 12px; color: #92400e; font-size: 0.7rem;">
                             <i class="fas fa-exclamation-triangle"></i> Not registered. Please register first.
                         </div>
                     `;
@@ -291,7 +380,7 @@
                 
                 if (data.status === 'pending') {
                     driverStatusInfo.innerHTML = `
-                        <div style="background: #fef3c7; padding: 0.5rem; border-radius: 8px; color: #92400e;">
+                        <div style="background: #fef3c7; padding: 10px; border-radius: 12px; color: #92400e; font-size: 0.7rem;">
                             <i class="fas fa-clock"></i> Registration pending. Waiting for admin approval.
                         </div>
                     `;
@@ -301,7 +390,7 @@
                 
                 if (data.status === 'rejected') {
                     driverStatusInfo.innerHTML = `
-                        <div style="background: #fee2e2; padding: 0.5rem; border-radius: 8px; color: #dc2626;">
+                        <div style="background: #fee2e2; padding: 10px; border-radius: 12px; color: #dc2626; font-size: 0.7rem;">
                             <i class="fas fa-times-circle"></i> Registration rejected. Please contact admin.
                         </div>
                     `;
@@ -311,7 +400,7 @@
                 
                 if (data.status === 'approved') {
                     driverStatusInfo.innerHTML = `
-                        <div style="background: #dcfce7; padding: 0.5rem; border-radius: 8px; color: #15803d;">
+                        <div style="background: #dcfce7; padding: 10px; border-radius: 12px; color: #15803d; font-size: 0.7rem;">
                             <i class="fas fa-check-circle"></i> ✅ Approved! You can share location.
                         </div>
                     `;
@@ -323,7 +412,7 @@
             } catch (error) {
                 addDebugLog(`Error checking status: ${error.message}`);
                 driverStatusInfo.innerHTML = `
-                    <div style="background: #fee2e2; padding: 0.5rem; border-radius: 8px; color: #dc2626;">
+                    <div style="background: #fee2e2; padding: 10px; border-radius: 12px; color: #dc2626; font-size: 0.7rem;">
                         <i class="fas fa-exclamation-triangle"></i> Error checking status. Please try again.
                     </div>
                 `;
@@ -331,7 +420,6 @@
             }
         }
 
-        // FIXED: Send location using URL encoded format (most reliable)
         async function sendLocation(latitude, longitude) {
             const busId = busSelect.value;
             if (!busId) {
@@ -343,22 +431,18 @@
             addDebugLog(`Coordinates: ${latitude}, ${longitude}`);
 
             try {
-                // Use URL encoded format (most reliable across all servers)
                 const formData = new URLSearchParams();
                 formData.append('lat', latitude);
                 formData.append('lng', longitude);
                 
                 const response = await fetch(`/api/buses/${encodeURIComponent(busId)}/location`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData.toString()
                 });
                 
                 addDebugLog(`Response status: ${response.status}`);
                 
-                // Parse response as JSON
                 let data;
                 const responseText = await response.text();
                 addDebugLog(`Response text: ${responseText}`);
@@ -417,7 +501,6 @@
 
             addDebugLog('=== Starting Location Sharing ===');
             
-            // First check if driver is approved
             const isApproved = await checkDriverStatus();
             if (!isApproved) {
                 showMessage('You are not approved to share location. Please register and wait for admin approval.', 'warning');
@@ -517,23 +600,19 @@
             showMessage('Location sharing stopped');
             addDebugLog('=== Location sharing stopped ===');
             
-            // Re-check status when bus changes
             checkDriverStatus();
         }
 
-        // When bus selection changes, check driver status
         busSelect.addEventListener('change', () => {
             debugInfo.innerHTML = '';
             debugInfo.style.display = 'none';
             checkDriverStatus();
             
-            // Reset sharing if active
             if (isSharing) {
                 stopSharing();
             }
         });
         
-        // Initial status check when page loads
         if (busSelect.value) {
             checkDriverStatus();
         }
@@ -541,7 +620,6 @@
         startBtn.addEventListener('click', startSharing);
         stopBtn.addEventListener('click', stopSharing);
         
-        // Initially disable start button until status is checked
         startBtn.disabled = true;
     </script>
 </body>

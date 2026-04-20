@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>BusTracker | Book Your Bus Tickets Online</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
@@ -22,8 +22,8 @@
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
         }
 
         ::-webkit-scrollbar-track {
@@ -40,7 +40,7 @@
         .header {
             background: linear-gradient(135deg, #0f1423 0%, #1a1a2e 50%, #16213e 100%);
             color: white;
-            padding: 0.6rem 2rem;
+            padding: 12px 16px;
             position: sticky;
             top: 0;
             z-index: 100;
@@ -53,10 +53,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .logo {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 800;
             background: linear-gradient(135deg, #fff, #fbbf24);
             -webkit-background-clip: text;
@@ -69,39 +71,40 @@
             color: #fbbf24;
             margin-right: 6px;
             background: none;
-            -webkit-background-clip: unset;
-            background-clip: unset;
-            font-size: 1.2rem;
+            font-size: 1rem;
         }
 
         .back-link {
             color: white;
             text-decoration: none;
-            padding: 6px 16px;
+            padding: 6px 14px;
             background: rgba(255,255,255,0.12);
             border-radius: 30px;
             transition: all 0.3s ease;
             font-weight: 500;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             backdrop-filter: blur(5px);
             border: 1px solid rgba(255,255,255,0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .back-link:hover {
+        .back-link:active {
             background: rgba(255,255,255,0.25);
-            transform: translateX(-3px);
+            transform: translateX(-2px);
         }
 
-        /* Search Bar - Fixed Visibility */
+        /* Search Bar - Mobile First */
         .search-bar {
             background: rgba(255,255,255,0.98);
             border-radius: 20px;
-            margin: -20px 2rem 2rem 2rem;
-            padding: 1.5rem 2rem;
+            margin: -16px 12px 16px 12px;
+            padding: 16px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             display: flex;
-            gap: 1.2rem;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 12px;
             position: relative;
             z-index: 10;
             backdrop-filter: blur(10px);
@@ -109,16 +112,15 @@
         }
 
         .search-field {
-            flex: 1;
-            min-width: 180px;
+            width: 100%;
         }
 
         .search-field label {
             display: block;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 700;
             color: #667eea;
-            margin-bottom: 0.5rem;
+            margin-bottom: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -129,11 +131,11 @@
 
         .search-field input {
             width: 100%;
-            padding: 0.8rem 1rem;
+            padding: 12px 14px;
             background: #f8fafc;
             border: 2px solid #e2e8f0;
             border-radius: 14px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-family: inherit;
             transition: all 0.3s ease;
             font-weight: 500;
@@ -156,49 +158,48 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 0 2.2rem;
+            padding: 14px;
             border-radius: 14px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-top: 1.5rem;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             letter-spacing: 0.5px;
             min-height: 48px;
+            width: 100%;
         }
 
-        .search-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        .search-btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
         }
 
-        /* Main Container */
+        /* Main Container - Mobile First */
         .main-container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 2rem 2rem 2rem;
+            padding: 0 12px 16px 12px;
             display: flex;
-            gap: 2rem;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        /* Filters Sidebar */
+        /* Filters Sidebar - Mobile First */
         .filters-sidebar {
-            width: 280px;
-            flex-shrink: 0;
+            width: 100%;
             background: rgba(255,255,255,0.95);
             border-radius: 20px;
-            padding: 1.2rem;
-            height: fit-content;
-            position: sticky;
-            top: 85px;
+            padding: 16px;
+            height: auto;
             box-shadow: 0 8px 25px rgba(0,0,0,0.08);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(102, 126, 234, 0.15);
+            order: 2;
         }
 
         .filter-section {
-            margin-bottom: 1.2rem;
-            padding-bottom: 1.2rem;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
             border-bottom: 1px solid #e2e8f0;
         }
 
@@ -210,32 +211,32 @@
 
         .filter-title {
             font-weight: 700;
-            margin-bottom: 0.8rem;
+            margin-bottom: 10px;
             color: #1a2c3e;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
         .filter-options {
             display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .filter-option {
             display: flex;
             align-items: center;
-            gap: 0.7rem;
+            gap: 8px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #475569;
             transition: all 0.2s;
-            padding: 0.2rem 0;
+            padding: 6px 0;
         }
 
-        .filter-option:hover {
+        .filter-option:active {
             color: #667eea;
         }
 
@@ -253,67 +254,69 @@
             font-weight: 600;
         }
 
-        .clear-filters:hover {
+        .clear-filters:active {
             text-decoration: underline;
         }
 
         /* Results Area */
         .results-area {
             flex: 1;
+            order: 1;
         }
 
-        /* Stats Bar */
+        /* Stats Bar - Mobile First */
         .stats-bar {
             background: rgba(255,255,255,0.95);
             border-radius: 16px;
-            padding: 0.8rem 1.2rem;
-            margin-bottom: 1.2rem;
+            padding: 12px;
+            margin-bottom: 12px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.8rem;
+            flex-direction: column;
+            gap: 10px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(102, 126, 234, 0.1);
         }
 
         .bus-count {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #64748b;
+            text-align: center;
         }
 
         .bus-count strong {
             color: #667eea;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 800;
         }
 
         .sort-options {
             display: flex;
-            gap: 0.6rem;
+            gap: 8px;
             align-items: center;
+            justify-content: center;
             flex-wrap: wrap;
         }
 
         .sort-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #64748b;
             font-weight: 600;
             text-transform: uppercase;
         }
 
         .sort-btn {
-            padding: 0.35rem 0.9rem;
+            padding: 6px 12px;
             background: #f1f5f9;
             border: none;
             border-radius: 30px;
             cursor: pointer;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             transition: all 0.3s ease;
             font-family: inherit;
             font-weight: 600;
             color: #475569;
+            min-height: 34px;
         }
 
         .sort-btn.active {
@@ -322,44 +325,46 @@
             box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
         }
 
-        .sort-btn:hover:not(.active) {
-            background: #e2e8f0;
-            transform: translateY(-1px);
+        .sort-btn:active {
+            transform: scale(0.96);
         }
 
         /* Offer Cards */
         .offers-section {
             display: flex;
-            gap: 0.8rem;
-            margin-bottom: 1.2rem;
-            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-direction: column;
         }
 
         .offer-card {
             background: linear-gradient(135deg, #fef3c7, #fde68a);
-            padding: 0.6rem 1rem;
+            padding: 12px;
             border-radius: 14px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 700;
             color: #92400e;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            flex: 1;
-            min-width: 200px;
             text-align: center;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        .offer-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        .offer-card:active {
+            transform: scale(0.98);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
-        /* Bus Cards */
+        /* Bus Cards - Mobile First */
         .bus-card {
             background: white;
             border-radius: 20px;
-            margin-bottom: 1rem;
+            margin-bottom: 12px;
             overflow: hidden;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 3px 12px rgba(0,0,0,0.08);
@@ -367,10 +372,8 @@
             border: 1px solid rgba(102, 126, 234, 0.1);
         }
 
-        .bus-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.12);
-            border-color: rgba(102, 126, 234, 0.3);
+        .bus-card:active {
+            transform: scale(0.99);
         }
 
         .bus-card.expanded {
@@ -394,31 +397,30 @@
         }
 
         .bus-main {
-            padding: 1.2rem;
+            padding: 14px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.8rem;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .bus-info {
-            flex: 2;
+            text-align: center;
         }
 
         .bus-operator {
             font-weight: 800;
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             color: #1a2c3e;
-            margin-bottom: 0.2rem;
+            margin-bottom: 4px;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
             flex-wrap: wrap;
         }
 
         .bus-type {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: #94a3b8;
             font-weight: 500;
         }
@@ -431,9 +433,9 @@
             color: white;
             padding: 3px 8px;
             border-radius: 25px;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: 700;
-            margin-top: 0.4rem;
+            margin-top: 6px;
         }
 
         .prime-badge {
@@ -442,92 +444,83 @@
             gap: 3px;
             background: linear-gradient(135deg, #f59e0b, #fbbf24);
             color: white;
-            font-size: 0.55rem;
+            font-size: 0.5rem;
             padding: 2px 8px;
             border-radius: 16px;
             font-weight: 700;
         }
 
         .timing-info {
-            flex: 1;
             text-align: center;
         }
 
-        .departure {
-            font-size: 1.1rem;
+        .departure, .arrival {
+            font-size: 1rem;
             font-weight: 800;
             color: #1a2c3e;
         }
 
         .duration {
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             color: #94a3b8;
-            margin: 3px 0;
+            margin: 4px 0;
             font-weight: 500;
         }
 
-        .arrival {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: #1a2c3e;
-        }
-
         .seat-info {
-            flex: 1;
-            text-align: right;
+            text-align: center;
         }
 
         .seats-available {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #10b981;
             font-weight: 700;
         }
 
         .single-seats {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: #f59e0b;
             font-weight: 600;
         }
 
         .price-info {
-            text-align: right;
-            min-width: 95px;
+            text-align: center;
         }
 
         .original-price {
             text-decoration: line-through;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #94a3b8;
         }
 
         .price {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 800;
             color: #667eea;
         }
 
         .discount-badge {
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             color: #10b981;
             font-weight: 700;
         }
 
         .expand-icon {
-            margin-left: 0.8rem;
+            margin: 0 auto;
             color: #94a3b8;
             cursor: pointer;
             transition: transform 0.3s ease;
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
             background: #f1f5f9;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
         }
 
-        .expand-icon:hover {
+        .expand-icon:active {
             background: #e2e8f0;
         }
 
@@ -538,13 +531,13 @@
         /* Bus Details */
         .bus-details {
             display: none;
-            padding: 1.2rem;
+            padding: 14px;
             background: linear-gradient(135deg, #f8fafc, #f1f5f9);
             border-top: 1px solid #e2e8f0;
         }
 
         .detail-section {
-            margin-bottom: 1.2rem;
+            margin-bottom: 14px;
         }
 
         .detail-section:last-child {
@@ -553,8 +546,8 @@
 
         .detail-title {
             font-weight: 700;
-            font-size: 0.8rem;
-            margin-bottom: 0.8rem;
+            font-size: 0.7rem;
+            margin-bottom: 8px;
             color: #1a2c3e;
             display: flex;
             align-items: center;
@@ -565,49 +558,37 @@
 
         .detail-title i {
             color: #667eea;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         .amenities-list {
             display: flex;
-            gap: 0.5rem;
+            gap: 6px;
             flex-wrap: wrap;
         }
 
         .amenity {
             background: white;
-            padding: 0.25rem 0.8rem;
+            padding: 4px 10px;
             border-radius: 25px;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             border: 1px solid #e2e8f0;
             font-weight: 500;
             color: #475569;
-            transition: all 0.2s;
-        }
-
-        .amenity:hover {
-            border-color: #667eea;
-            color: #667eea;
         }
 
         .points-list {
             display: flex;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 6px;
         }
 
         .point-item {
-            font-size: 0.75rem;
-            padding: 0.4rem;
+            font-size: 0.7rem;
+            padding: 6px;
             background: white;
             border-radius: 10px;
-            margin-bottom: 0.4rem;
-            transition: all 0.2s;
-        }
-
-        .point-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            margin-bottom: 4px;
         }
 
         .point-item i {
@@ -617,17 +598,18 @@
 
         .cancellation-table {
             width: 100%;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             border-collapse: collapse;
-            margin-top: 0.4rem;
+            margin-top: 6px;
             background: white;
             border-radius: 10px;
-            overflow: hidden;
+            overflow-x: auto;
+            display: block;
         }
 
         .cancellation-table th,
         .cancellation-table td {
-            padding: 0.6rem;
+            padding: 8px;
             text-align: left;
             border-bottom: 1px solid #e2e8f0;
         }
@@ -638,15 +620,11 @@
             color: white;
         }
 
-        .cancellation-table tr:last-child td {
-            border-bottom: none;
-        }
-
         .policy-note {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: #64748b;
-            margin-top: 0.6rem;
-            padding: 0.6rem;
+            margin-top: 8px;
+            padding: 8px;
             background: #fef3c7;
             border-radius: 10px;
         }
@@ -654,42 +632,42 @@
         /* Load More Button */
         .load-more-container {
             text-align: center;
-            margin-top: 1.5rem;
+            margin-top: 16px;
         }
 
         .load-more-btn {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
-            padding: 0.7rem 2rem;
+            padding: 12px 24px;
             border-radius: 40px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
             font-family: inherit;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            min-height: 48px;
         }
 
-        .load-more-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        .load-more-btn:active {
+            transform: scale(0.98);
         }
 
         /* Loading Spinner */
         .loading-spinner {
             text-align: center;
-            padding: 2.5rem;
+            padding: 30px;
         }
 
         .spinner {
-            width: 45px;
-            height: 45px;
+            width: 40px;
+            height: 40px;
             border: 3px solid #e2e8f0;
             border-top-color: #667eea;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            margin: 0 auto 0.8rem;
+            margin: 0 auto 12px;
         }
 
         @keyframes spin {
@@ -699,18 +677,18 @@
         /* No Results */
         .no-results {
             text-align: center;
-            padding: 2.5rem;
+            padding: 30px;
             background: white;
             border-radius: 20px;
         }
 
         .no-results i {
-            font-size: 3rem;
+            font-size: 2.5rem;
             color: #cbd5e1;
-            margin-bottom: 0.8rem;
+            margin-bottom: 12px;
         }
 
-        /* Modal Styles */
+        /* Modal Animations */
         @keyframes modalFadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -721,71 +699,137 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .bus-main {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .seat-info {
-                text-align: center;
-            }
-
-            .price-info {
-                text-align: center;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .main-container {
-                flex-direction: column;
-                padding: 0 1rem 1rem 1rem;
-            }
-
-            .filters-sidebar {
-                width: 100%;
-                position: static;
-                top: auto;
-            }
-
-            .search-bar {
-                margin: -20px 1rem 1rem 1rem;
-                padding: 1rem;
-                flex-direction: column;
-            }
-
-            .search-field {
-                min-width: 100%;
-            }
-
-            .search-btn {
-                margin-top: 0.5rem;
-                width: 100%;
-                padding: 0.8rem;
-            }
-
-            .stats-bar {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .sort-options {
-                justify-content: center;
-            }
-
-            .cancellation-table {
-                font-size: 0.55rem;
+        /* ===== TABLET AND DESKTOP (min-width: 768px) ===== */
+        @media (min-width: 768px) {
+            .header {
+                padding: 12px 32px;
             }
             
-            .cancellation-table th,
-            .cancellation-table td {
-                padding: 0.4rem;
+            .logo {
+                font-size: 1.3rem;
+            }
+            
+            .logo i {
+                font-size: 1.2rem;
+            }
+            
+            .back-link {
+                font-size: 0.85rem;
+                padding: 8px 20px;
+            }
+            
+            .search-bar {
+                margin: -20px 32px 24px 32px;
+                padding: 20px 24px;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            
+            .search-field {
+                flex: 1;
+                min-width: 180px;
+            }
+            
+            .search-btn {
+                width: auto;
+                padding: 0 32px;
+                margin-top: 24px;
+            }
+            
+            .main-container {
+                padding: 0 32px 24px 32px;
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            
+            .filters-sidebar {
+                width: 280px;
+                flex-shrink: 0;
+                position: sticky;
+                top: 85px;
+                order: 1;
+            }
+            
+            .results-area {
+                order: 2;
+            }
+            
+            .filter-options {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .stats-bar {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+            }
+            
+            .bus-count {
+                text-align: left;
+            }
+            
+            .bus-main {
+                flex-direction: row;
+                align-items: center;
+                padding: 16px 20px;
+                gap: 16px;
+            }
+            
+            .bus-info {
+                flex: 2;
+                text-align: left;
+            }
+            
+            .bus-operator {
+                justify-content: flex-start;
+            }
+            
+            .timing-info {
+                flex: 1;
+                text-align: center;
+            }
+            
+            .seat-info {
+                flex: 1;
+                text-align: right;
+            }
+            
+            .price-info {
+                min-width: 100px;
+                text-align: right;
+            }
+            
+            .expand-icon {
+                margin: 0;
+            }
+            
+            .offers-section {
+                flex-direction: row;
             }
             
             .offer-card {
-                min-width: 100%;
+                flex: 1;
+                padding: 12px 16px;
             }
+            
+            .cancellation-table {
+                display: table;
+                font-size: 0.65rem;
+            }
+        }
+
+        /* Large Desktop */
+        @media (min-width: 1200px) {
+            .filters-sidebar {
+                width: 320px;
+            }
+        }
+
+        /* Touch-friendly - minimum tap targets */
+        button, .sort-btn, .offer-card, .bus-card, .expand-icon, .load-more-btn, .back-link {
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -875,19 +919,18 @@
                     <i class="fas fa-bus"></i> <strong id="busCount">0</strong> buses found
                 </div>
                 <div class="sort-options">
-                    <span class="sort-label"><i class="fas fa-sort"></i> SORT BY</span>
+                    <span class="sort-label"><i class="fas fa-sort"></i> SORT</span>
                     <button class="sort-btn" data-sort="relevance">Relevance</button>
                     <button class="sort-btn" data-sort="rating">Rating</button>
-                    <button class="sort-btn" data-sort="price">Price: Low to High</button>
+                    <button class="sort-btn" data-sort="price">Price</button>
                     <button class="sort-btn" data-sort="departure">Departure</button>
-                    <button class="sort-btn" data-sort="arrival">Arrival</button>
                 </div>
             </div>
 
             <!-- Offers -->
             <div class="offers-section">
                 <div class="offer-card" onclick="showBookingRedirect('MMT')">
-                    <i class="fas fa-tag"></i> MMTSBIVISA - Flat 8% off up to ₹500
+                    <i class="fas fa-tag"></i> MMTSBIVISA - 8% off up to ₹500
                 </div>
                 <div class="offer-card" onclick="showBookingRedirect('DEAL')">
                     <i class="fas fa-gift"></i> MyDeals - Extra ₹100 OFF
@@ -905,7 +948,7 @@
             <!-- Load More Button -->
             <div class="load-more-container" id="loadMoreContainer" style="display: none;">
                 <button class="load-more-btn" id="loadMoreBtn">
-                    <i class="fas fa-chevron-down"></i> Show More Buses
+                    <i class="fas fa-chevron-down"></i> Show More
                 </button>
             </div>
         </div>
@@ -921,7 +964,6 @@
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('travelDate').value = today;
 
-        // Function to load buses
         async function loadBuses(reset = true) {
             if (isLoading) return;
             isLoading = true;
@@ -978,7 +1020,7 @@
                             <div class="no-results">
                                 <i class="fas fa-bus"></i>
                                 <h3>No buses found</h3>
-                                <p>Try adjusting your filters or search criteria</p>
+                                <p>Try adjusting your filters</p>
                             </div>
                         `;
                         document.getElementById('loadMoreContainer').style.display = 'none';
@@ -1015,23 +1057,17 @@
             let cancellationHtml = '';
             if (bus.cancellation_policy_details && Object.keys(bus.cancellation_policy_details).length > 0) {
                 cancellationHtml = `
-                    <table class="cancellation-table">
-                        <thead>
-                            <tr><th>CANCELLATION TIME</th><th>PENALTY</th><th>AMOUNT</th></tr>
-                        </thead>
-                        <tbody>
-                            ${Object.entries(bus.cancellation_policy_details).map(([key, val]) => `
-                                <tr>
-                                    <td>${key.replace(/_/g, ' ').toUpperCase()}</td>
-                                    <td>${val.percentage}%</td>
-                                    <td>₹${val.amount.toLocaleString()}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    <div class="policy-note">
-                        <i class="fas fa-info-circle"></i> Penalty calculated on ₹${originalPrice.toLocaleString()}
+                    <div style="overflow-x: auto;">
+                        <table class="cancellation-table">
+                            <thead><tr><th>CANCELLATION TIME</th><th>PENALTY</th><th>AMOUNT</th></tr></thead>
+                            <tbody>
+                                ${Object.entries(bus.cancellation_policy_details).map(([key, val]) => `
+                                    <tr><td>${key.replace(/_/g, ' ').toUpperCase()}</td><td>${val.percentage}%</td><td>₹${val.amount.toLocaleString()}</td></tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
+                    <div class="policy-note"><i class="fas fa-info-circle"></i> Penalty on ₹${originalPrice.toLocaleString()}</div>
                 `;
             } else {
                 cancellationHtml = `<div class="point-item"><i class="fas fa-file-alt"></i> ${escapeHtml(bus.cancellation_policy)}</div>`;
@@ -1042,13 +1078,12 @@
                 travelPolicyHtml = `
                     <div class="points-list">
                         <div class="point-item"><i class="fas fa-child"></i> ${escapeHtml(bus.travel_policy.child_passenger || 'Children above age 5 need ticket')}</div>
-                        <div class="point-item"><i class="fas fa-suitcase"></i> ${escapeHtml(bus.travel_policy.luggage || '2 pieces free, excess chargeable')}</div>
+                        <div class="point-item"><i class="fas fa-suitcase"></i> ${escapeHtml(bus.travel_policy.luggage || '2 pieces free')}</div>
                         <div class="point-item"><i class="fas fa-paw"></i> ${escapeHtml(bus.travel_policy.pets || 'Pets not allowed')}</div>
-                        <div class="point-item"><i class="fas fa-wine-bottle"></i> ${escapeHtml(bus.travel_policy.liquor || 'Liquor prohibited')}</div>
                     </div>
                 `;
             } else {
-                travelPolicyHtml = `<div class="point-item"><i class="fas fa-shield-alt"></i> Standard travel policies apply</div>`;
+                travelPolicyHtml = `<div class="point-item"><i class="fas fa-shield-alt"></i> Standard policies apply</div>`;
             }
             
             card.innerHTML = `
@@ -1059,9 +1094,7 @@
                             ${bus.is_prime ? '<span class="prime-badge"><i class="fas fa-crown"></i> PRIME</span>' : ''}
                         </div>
                         <div class="bus-type">${escapeHtml(bus.bus_type)}</div>
-                        <div class="bus-rating">
-                            <i class="fas fa-star"></i> ${rating.toFixed(1)} <span style="opacity:0.8;">★</span>
-                        </div>
+                        <div class="bus-rating"><i class="fas fa-star"></i> ${rating.toFixed(1)} ★</div>
                     </div>
                     <div class="timing-info">
                         <div class="departure">${bus.departure_time}</div>
@@ -1069,8 +1102,8 @@
                         <div class="arrival">${bus.arrival_time}</div>
                     </div>
                     <div class="seat-info">
-                        <div class="seats-available"><i class="fas fa-chair"></i> ${bus.available_seats} seats left</div>
-                        <div class="single-seats"><i class="fas fa-user"></i> ${bus.single_seats} single seats</div>
+                        <div class="seats-available"><i class="fas fa-chair"></i> ${bus.available_seats} left</div>
+                        <div class="single-seats"><i class="fas fa-user"></i> ${bus.single_seats} single</div>
                     </div>
                     <div class="price-info">
                         ${showDiscount ? `<div class="original-price">₹${originalPrice.toLocaleString()}</div>` : ''}
@@ -1093,7 +1126,7 @@
                         <div class="points-list">
                             ${bus.pickup_points && bus.pickup_points.length > 0 ? 
                                 bus.pickup_points.map(p => `<div class="point-item"><i class="fas fa-location-dot"></i> ${escapeHtml(p)}</div>`).join('') : 
-                                '<div class="point-item"><i class="fas fa-location-dot"></i> Bhilad Bus Stand</div>'}
+                                '<div class="point-item"><i class="fas fa-location-dot"></i> City Bus Stand</div>'}
                         </div>
                     </div>
                     <div class="detail-section">
@@ -1101,11 +1134,11 @@
                         <div class="points-list">
                             ${bus.drop_points && bus.drop_points.length > 0 ? 
                                 bus.drop_points.map(p => `<div class="point-item"><i class="fas fa-map-pin"></i> ${escapeHtml(p)}</div>`).join('') : 
-                                '<div class="point-item"><i class="fas fa-map-pin"></i> Vapi Bus Stand</div>'}
+                                '<div class="point-item"><i class="fas fa-map-pin"></i> City Bus Stand</div>'}
                         </div>
                     </div>
                     <div class="detail-section">
-                        <div class="detail-title"><i class="fas fa-file-invoice"></i> Cancellation Policy</div>
+                        <div class="detail-title"><i class="fas fa-file-invoice"></i> Cancellation</div>
                         ${cancellationHtml}
                     </div>
                     <div class="detail-section">
@@ -1131,110 +1164,60 @@
             }
         }
 
-        // Professional Offer Redirect Modal with Flask Redirect
         function showBookingRedirect(offerType) {
             const offers = {
-                MMT: {
-                    name: 'MMTSBIVISA Offer',
-                    discount: 'Flat 8% off up to ₹500',
-                    code: 'MMTSBIVISA',
-                    url: '/offer/mmt'
-                },
-                DEAL: {
-                    name: 'MyDeals Offer',
-                    discount: 'Extra ₹100 OFF',
-                    code: 'MYDEAL100',
-                    url: '/offer/mydeal'
-                }
+                MMT: { name: 'MMTSBIVISA', discount: 'Flat 8% off up to ₹500', code: 'MMTSBIVISA', url: '/offer/mmt' },
+                DEAL: { name: 'MyDeals', discount: 'Extra ₹100 OFF', code: 'MYDEAL100', url: '/offer/mydeal' }
             };
             
             const offer = offers[offerType];
             
-            // Create modal element
             const modalOverlay = document.createElement('div');
             modalOverlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.75);
-                backdrop-filter: blur(8px);
-                z-index: 10000;
-                display: flex;
-                justify-content: center;
-                align-items: center;
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+                z-index: 10000; display: flex; justify-content: center; align-items: center;
                 animation: modalFadeIn 0.3s ease;
             `;
             
             modalOverlay.innerHTML = `
-                <div style="background: white; border-radius: 28px; max-width: 480px; width: 90%; overflow: hidden; animation: modalSlideUp 0.3s ease;">
-                    <!-- Header -->
-                    <div style="background: linear-gradient(135deg, #f59e0b, #fbbf24); padding: 1.5rem; text-align: center;">
-                        <div style="background: rgba(255,255,255,0.2); width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                            <i class="fas fa-gift" style="font-size: 2rem; color: white;"></i>
+                <div style="background: white; border-radius: 28px; max-width: 480px; width: 90%; overflow: hidden; animation: modalSlideUp 0.3s ease; margin: 16px;">
+                    <div style="background: linear-gradient(135deg, #f59e0b, #fbbf24); padding: 20px; text-align: center;">
+                        <div style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <i class="fas fa-gift" style="font-size: 1.8rem; color: white;"></i>
                         </div>
-                        <h3 style="color: white; font-size: 1.3rem; margin-bottom: 0.25rem;">${offer.name}</h3>
-                        <p style="color: rgba(255,255,255,0.9); font-size: 0.85rem;">Exclusive discount for you!</p>
+                        <h3 style="color: white; font-size: 1.2rem;">${offer.name}</h3>
+                        <p style="color: rgba(255,255,255,0.9); font-size: 0.75rem;">Exclusive discount!</p>
                     </div>
-                    
-                    <!-- Body -->
-                    <div style="padding: 1.5rem;">
-                        <!-- Discount Badge -->
-                        <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 16px; padding: 1rem; text-align: center; margin-bottom: 1.5rem;">
-                            <p style="color: #92400e; font-weight: 800; font-size: 1.1rem;">${offer.discount}</p>
-                            <p style="color: #b45309; font-size: 0.75rem; margin-top: 0.25rem;">on your bus booking</p>
+                    <div style="padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 16px; padding: 12px; text-align: center; margin-bottom: 16px;">
+                            <p style="color: #92400e; font-weight: 800; font-size: 1rem;">${offer.discount}</p>
                         </div>
-                        
-                        <!-- How to use -->
-                        <div style="margin-bottom: 1.5rem;">
-                            <p style="color: #1a2c3e; font-weight: 700; margin-bottom: 0.75rem;">
-                                <i class="fas fa-star" style="color: #f59e0b;"></i> How to avail this offer:
+                        <div style="margin-bottom: 16px;">
+                            <p style="color: #1a2c3e; font-weight: 700; margin-bottom: 10px; font-size: 0.8rem;">
+                                <i class="fas fa-star" style="color: #f59e0b;"></i> How to avail:
                             </p>
-                            <div style="background: #f8fafc; border-radius: 16px; padding: 1rem;">
-                                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                    <div style="width: 28px; height: 28px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">1</div>
-                                    <span style="color: #475569;">Click "Continue to Book" below</span>
+                            <div style="background: #f8fafc; border-radius: 16px; padding: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.7rem;">
+                                    <div style="width: 24px; height: 24px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">1</div>
+                                    <span>Click "Continue to Book"</span>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                    <div style="width: 28px; height: 28px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">2</div>
-                                    <span style="color: #475569;">Select your bus on MakeMyTrip</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <div style="width: 28px; height: 28px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">3</div>
-                                    <span style="color: #475569;">Apply coupon code <strong style="color: #667eea;">${offer.code}</strong> at checkout</span>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.7rem;">
+                                    <div style="width: 24px; height: 24px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">2</div>
+                                    <span>Apply code <strong>${offer.code}</strong></span>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Terms -->
-                        <div style="margin-bottom: 1.5rem;">
-                            <p style="color: #94a3b8; font-size: 0.7rem;">
-                                <i class="fas fa-info-circle"></i> Terms & Conditions apply. Valid on first booking only.
-                            </p>
-                        </div>
-                        
-                        <!-- Buttons -->
-                        <div style="display: flex; gap: 1rem;">
-                            <button onclick="this.closest('[style*=\\'position: fixed\\']').remove()" style="flex: 1; padding: 0.8rem; background: #f1f5f9; border: none; border-radius: 40px; cursor: pointer; font-weight: 600; font-family: inherit; color: #475569; transition: all 0.2s;">
-                                Cancel
-                            </button>
-                            <button onclick="window.location.href='${offer.url}'; this.closest('[style*=\\'position: fixed\\']').remove();" style="flex: 1; padding: 0.8rem; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 40px; cursor: pointer; font-weight: 600; font-family: inherit; transition: all 0.2s;">
-                                <i class="fas fa-arrow-right"></i> Continue to Book
-                            </button>
+                        <div style="display: flex; gap: 12px;">
+                            <button onclick="this.closest('[style*=\\'position: fixed\\']').remove()" style="flex: 1; padding: 12px; background: #f1f5f9; border: none; border-radius: 40px; font-weight: 600; font-size: 0.8rem;">Cancel</button>
+                            <button onclick="window.location.href='${offer.url}'; this.closest('[style*=\\'position: fixed\\']').remove();" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 40px; font-weight: 600; font-size: 0.8rem;"><i class="fas fa-arrow-right"></i> Continue</button>
                         </div>
                     </div>
                 </div>
             `;
             
             document.body.appendChild(modalOverlay);
-            
-            // Close modal when clicking outside
-            modalOverlay.addEventListener('click', (e) => {
-                if (e.target === modalOverlay) {
-                    modalOverlay.remove();
-                }
-            });
+            modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) modalOverlay.remove(); });
         }
 
         function escapeHtml(text) {
@@ -1244,20 +1227,10 @@
             return div.innerHTML;
         }
 
-        function loadMore() {
-            currentPage++;
-            loadBuses(false);
-        }
-
-        function applyFilters() {
-            currentPage = 1;
-            loadBuses(true);
-        }
-
+        function loadMore() { currentPage++; loadBuses(false); }
+        function applyFilters() { currentPage = 1; loadBuses(true); }
         function clearFilters() {
-            document.querySelectorAll('.ac-filter:checked, .seat-filter:checked').forEach(cb => {
-                cb.checked = false;
-            });
+            document.querySelectorAll('.ac-filter:checked, .seat-filter:checked').forEach(cb => cb.checked = false);
             document.getElementById('singleSeatsFilter').checked = false;
             applyFilters();
         }
